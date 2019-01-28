@@ -1,5 +1,5 @@
 
-# AuthentiGO
+# AuthentiGo
 
 [![Build Status](https://travis.ibm.com/Alessio-Savi/GoLogAnalyzer.svg?token=wWmbVrxsSXYSyYLLhamH&branch=master)](https://travis.ibm.com/Alessio-Savi/GoLogAnalyzer)
 
@@ -7,9 +7,9 @@ Simple Golang tool that work as a "plug-and-play" executable for authenticate yo
 
 ## Getting Started
 
-During the development of every internal tools, 90% of the time it's request to create an "authentication layer" in order to restrict the access to the services only to the person admitted.
+During the development of every internal tools, 90% of the time it's request to create an "__*authentication layer*__" in order to restrict the access to the services only to the person admitted.
 
-In some circonstances you can simply pick up an external webserver (like nginx/apache/happroxy) and proxypass/reroute the service. If you are the root of the machine you can also forward the traffic only to the people admitted to receive it.
+In some circonstances you can simply pick up an external webserver (like *nginx/apache/happroxy*) and *proxypass/reroute* the service. If you are the root of the machine you can also forward the traffic only to the people admitted to receive it by *forwarding* the TCP traffic only to the customer allowed.
 
 But what in case that you are a little IT Specials that *can't touch the enviroinment* and *want to restrict the access to a service using an __authentication layer__*?
 
@@ -24,28 +24,38 @@ This tool is developed for have few HTTP API interfaces in order:
 ### Features
 
 - Login phase:
+
     -- Purpouse:
+
         1) Auth is needed in order to receive the token;
         2) Retrict the access
     -- Capabilites:
+
         * *Input valdation methods*
         * *BasicAuth headers welcome*
         * *Verify if user match with the one in MongoDB*
         * *Generate token and set it into Redis*
 - Registration
+
     -- Purpouse:
+
         1) Save the user that can access to the services
     -- Capabilities:
+
         * *Input valdation methods*
         * *BasicAuth headers welcome*
         * *Persistent data saved into MongoDB*
+
 - Verification
+
     -- Purpouse:
+
         1) Create a middleware for "proxypass" the request
         2) Verify the authentication of every request
         3) Be as much "standard" as possibile in order to be used without integration issue
         4) Have a performing verification layer that can be scaled @runtime
     -- Capabilites:
+
         * *RESTfull implementation*
         * *Input valdation methods*
         * *Redis authentication for great performance*
