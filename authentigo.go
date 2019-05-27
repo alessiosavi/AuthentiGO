@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/globalsign/mgo"
+	"github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
+
 	//Golang import
 	"bytes"
 	"encoding/json"
@@ -10,10 +13,10 @@ import (
 	"strings"
 
 	// Internal import
-	authutils "authentigo/auth"
-	basiccrypt "authentigo/crypt"
-	basicredis "authentigo/database/redis"
-	utils "gologviewer/utils/core"
+	utils "github.com/alessiosavi/GoUtils"
+	authutils "github.ibm.com/Alessio-Savi/AuthentiGo/auth"
+	basiccrypt "github.ibm.com/Alessio-Savi/AuthentiGo/crypt"
+	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
 
 	// External import
 	"github.com/onrik/logrus/filename"
@@ -50,30 +53,29 @@ func main() {
 	Formatter.ForceColors = true
 	log.AddHook(filename.NewHook()) // Print filename + line at every log
 	log.SetFormatter(Formatter)
-	log.SetLevel(log.DebugLevel)
-	var cfg configuration
-	cfg = configuration{Port: 8090, Host: "localhost"}
-	handleRequests(cfg)
+	log.SetLevel(log.FatalLevel)
+	mongoClient := basicmongo.InitMongoDBConnection(nil)
+	// TODO: Add configuration parameter
+	cfg := configuration{Port: 8090, Host: "localhost"}
+	handleRequests(cfg, mongoClient)
 }
 
 // handleRequests Handler of the HTTP API
-func handleRequests(cfg configuration) {
+func handleRequests(cfg configuration, mgoClient *mgo.Session) {
 	m := func(ctx *fasthttp.RequestCtx) {
 		ctx.Response.Header.Set("AuthentiGo", "v0.1.0$/alpha")
 		log.Info("REQUEST --> ", ctx, " | Headers: ", ctx.Request.Header.String(), " | Body: ", ctx.PostBody())
 		switch string(ctx.Path()) {
-		case "/send":
-			//ctx.Write(sendGet(nil))
 		case "/middleware":
 			middleware(ctx)
 		case "/benchmark":
 			fastBenchmarkHTTP(ctx) // Benchmark API
 		case "/auth/login":
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
-			AuthLoginWrapper(ctx) // Login functionality [Test purpouse]
+			AuthLoginWrapper(ctx, mgoClient) // Login functionality [Test purpouse]
 		case "/auth/register":
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
-			AuthRegisterWrapper(ctx) // Register an user into the DB [Test purpouse]
+			AuthRegisterWrapper(ctx, mgoClient) // Register an user into the DB [Test purpouse]
 		case "/auth/verify":
 			VerifyCookieFromRedisHTTP(ctx) // Verify if an user is authorized to use the services
 		default:
@@ -83,9 +85,9 @@ func handleRequests(cfg configuration) {
 		}
 	}
 	// The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
-	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestCompression) // Compress data before sending (if requested by the client)
-	err := fasthttp.ListenAndServe(cfg.Host+":"+strconv.Itoa(cfg.Port), gzipHandler)  // Try to start the server with input "host:port" received in input
-	if err != nil {                                                                   // No luck, connection not succesfully. Probably port used ...
+	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestSpeed)      // Compress data before sending (if requested by the client)
+	err := fasthttp.ListenAndServe(cfg.Host+":"+strconv.Itoa(cfg.Port), gzipHandler) // Try to start the server with input "host:port" received in input
+	if err != nil {                                                                  // No luck, connection not succesfully. Probably port used ...
 		log.Warn("Port ", cfg.Port, " seems used :/")
 		for i := 0; i < 10; i++ {
 			port := strconv.Itoa(utils.Random(8081, 8090)) // Generate a new port to use
@@ -104,17 +106,16 @@ func handleRequests(cfg configuration) {
 //AuthLoginWrapper is the authentication wrapper for login functionality. It allow the customers that have completed the registration phase to login into the services.
 // In order to be compliant with as many protocol as possibile, the method try find the two parameter needed (user,pass) sequentially from:
 // BasicAuth headers; query args; GET args; POST args. It manage few error cause just for debug purpouse
-func AuthLoginWrapper(ctx *fasthttp.RequestCtx) {
+func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request
 	if authutils.ValidateCredentials(username, password) { // Verify if the input parameter respect the rules ...
-		check := authutils.LoginUserCoreHTTP(username, password) // Login phase
-		if strings.Compare(check, "OK") == 0 {                   // Login Succeed
+		check := authutils.LoginUserCoreHTTP(username, password, mgoClient) // Login phase
+		if strings.Compare(check, "OK") == 0 {                              // Login Succeed
 			token := basiccrypt.GenerateToken(username, password)             // Generate a simple md5 hashed token
 			ctx.Response.Header.SetCookie(CreateCookie("GoLog-Token", token)) // Set the token into the cookie headers
 			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
 			log.Info("AuthLoginWrapper | Inserting token into Redis ", token)
-
 			redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
 			if err != nil {
 				log.Error("AuthLoginWrapper | Impossible to connect to Redis for store the token | CLIENT: ", redisClient, " | ERR: ", err)
@@ -149,12 +150,12 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx) {
 
 //AuthRegisterWrapper is the authentication wrapper for register the client into the service.
 //It have to parse the credentials of the customers and register the username and the password into the DB.
-func AuthRegisterWrapper(ctx *fasthttp.RequestCtx) {
+func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request
 	if authutils.ValidateCredentials(username, password) {
-		check := authutils.RegisterUserCoreHTTP(username, password) // Registration phase, connect to MongoDB
-		if strings.Compare(check, "OK") == 0 {                      // Registration Succeed
+		check := authutils.RegisterUserCoreHTTP(username, password, mgoClient) // Registration phase, connect to MongoDB
+		if strings.Compare(check, "OK") == 0 {                                 // Registration Succeed
 			log.Warn("AuthRegisterWrapper | Registering new client! | ", username, ":", password)
 			json.NewEncoder(ctx).Encode(status{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
 		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input don't match with rules
@@ -308,12 +309,16 @@ func sendGet(request middlewareRequest) []byte {
 	log.Info("URL:>", url)
 	//	data = []byte(`{"title":"Buy cheese and bread for breakfast."}`)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte("")))
+	if err != nil {
+		log.Error("sendGet | Ouch! Seems that we POST an error | ERR: ", err)
+	}
 	req.Header.Set("X-Custom-Header", "login_test")
 	req.Header.Set("Content-Type", "text/plain")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		// Raise os.Exit
 		panic(err)
 	}
 	defer resp.Body.Close()

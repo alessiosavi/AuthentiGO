@@ -56,8 +56,5 @@ func GenerateToken(username string, password string) string {
 
 // VerifyToken verify if the token is related to the current user
 func VerifyToken(data string, username string, password string) bool {
-	if strings.Compare(createHash(username+":"+password), data) == 0 {
-		return true
-	}
-	return false
+	return strings.Compare(createHash(username+":"+password), data) == 0
 }

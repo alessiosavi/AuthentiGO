@@ -164,7 +164,7 @@ func GetCollectionsData(session *mgo.Session, database string) []Collection {
 		if strings.Compare(collections[j].Name, "system.profile") == 0 { // Removing MongoDB profiling collections
 			log.Error("Removing ", collections[j].Name, " ...")
 			RemoveCollectionFromDB(session, database, collections[j].Name)
-		} else if strings.Contains(collections[j].Name, "icket") == true || strings.Contains(collections[j].Name, "ava") == true { // Ignore big ticket DB
+		} else if strings.Contains(collections[j].Name, "icket") || strings.Contains(collections[j].Name, "ava") { // Ignore big ticket DB
 			log.Error("Skipping ", collections[j].Name, " ...")
 		} else {
 			for k := 0; k < len(collections); k++ { // Retrieving collection data
