@@ -1,17 +1,18 @@
 package authutils
 
 import (
-	basicmongo "authentigo/database/mongo"
-	basicredis "authentigo/database/redis"
 	"bytes"
 	"encoding/base64"
+	"github.com/go-redis/redis"
+	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
+	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
 	"regexp"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	log "github.com/sirupsen/logrus"
 )
 
 // Person structure of a customer for save it into the DB during registration phase.
@@ -46,14 +47,14 @@ type City struct {
 
 // LoginUserCoreHTTP is delegated to manage the "core process" of authentication. It use the username in input for retrieve the customer
 // data from MongoDB. If the data is found, then the password in input will be compared with the one retrieved from the database
-func LoginUserCoreHTTP(username, password string) string {
+func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session) string {
 	log.Debug("LoginUserHTTP | Verify if user [", username, "] is registered ...")
-	mongoClient := basicmongo.InitMongoDBConnection(nil) // Connect to the default (nil) database
-	if mongoClient == nil {                              // 10 seconds wait
+	//mongoClient := basicmongo.InitMongoDBConnection(nil) // Connect to the default (nil) database
+	if mongoClient == nil { // 10 seconds wait
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
-	defer mongoClient.Close() // TODO: Possibile to do better ?
+	//defer mongoClient.Close() // TODO: Possibile to do better ?
 	log.Info("LoginUserHTTP | Getting value from DB ...")
 	var User Person                                                                                     // Allocate a Person for store the DB result of next instruction
 	err := mongoClient.DB("GoLog-Customer").C("Customer").Find(bson.M{"Username": username}).One(&User) // Searching the user and assign the result (&) to User
@@ -73,24 +74,26 @@ func LoginUserCoreHTTP(username, password string) string {
 
 // InsertTokenIntoRedis is delegated to store the token of the customer into Redis. After that a customer have logged in, the token
 // assigned as a cookie is stored into Redis (used as a Cache), in order to validate every request without query MongoDB.
-func InsertTokenIntoRedis(User Person, token string) string {
+func InsertTokenIntoRedis(User Person, token string, redisClient *redis.Client) string {
 	log.Info("LoginUserHTTP | Inserting token into Redis for user ", User)
-	redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
-	if err != nil {
-		log.Error("RegisterUserCoreHTTP | Impossible to connect to Redis for store the token | CLIENT: ", redisClient, " | ERR: ", err)
+	//redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
+	if redisClient == nil {
+		log.Error("RegisterUserCoreHTTP | Impossible to connect to Redis for store the token | CLIENT: ", redisClient) //, " | ERR: ", err)
 		return "REDIS_DB_UNAVAIBLE"
 	} // Store the token for future auth check
-	basicredis.InsertIntoClient(redisClient, User.Username, token) // insert the token into the DB
-	log.Info("LoginUserHTTP | Token inserted! All operation finished correctly!")
-	return "OK"
+	if basicredis.InsertIntoClient(redisClient, User.Username, token) { // insert the token into the DB
+		log.Info("LoginUserHTTP | Token inserted! All operation finished correctly!")
+		return "OK"
+	}
+	return "KO"
 }
 
 // RegisterUserCoreHTTP is delegated to register the credential of the user into the Redis database.
 // It estabilish the connection to MongoDB with a specialized function, then it create an user with the input data.
 // After that, it ask to a delegated function to insert the data into Redis.
-func RegisterUserCoreHTTP(username, password string) string {
+func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) string {
 	log.Debug("RegisterUserCoreHTTP | Registering [", username, ":", password, "]")
-	mongoClient := basicmongo.InitMongoDBConnection(nil) // Enstabilish the connection to the default DB
+	//mongoClient := basicmongo.InitMongoDBConnection(nil) // Enstabilish the connection to the default DB
 	if mongoClient == nil {
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
@@ -113,7 +116,7 @@ func VerifyCookieFromRedisCoreHTTP(user, token string) string {
 				return "REDIS_DB_UNAVAIBLE"
 			} // Retrieve the token for compare
 			check, dbToken := basicredis.GetValueFromDB(redisClient, user)
-			if check == true {
+			if check {
 				if strings.Compare(dbToken, token) == 0 {
 					log.Info("VerifyCookieFromRedisCoreHTTP | Token MATCH!! User is logged! | ", user, " | ", token)
 					return "AUTHORIZED"
