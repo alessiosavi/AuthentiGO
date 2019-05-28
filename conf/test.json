@@ -1,0 +1,18 @@
+{
+    "Host": "127.0.0.1",
+    "Port": 8090,
+    "Version": "v0.1.1",
+    "Mongo": {
+        "Host": "127.0.0.1",
+        "Port": 27017
+    },
+    "Redis": {
+        "Host": "127.0.0.1",
+        "Port": "6379"
+    },
+    "Log": {
+        "Level": "debug",
+        "Path": "./log/",
+        "Name": "authentigo.log"
+    }
+}

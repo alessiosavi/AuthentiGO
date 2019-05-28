@@ -26,29 +26,18 @@ type ServerData struct {
 	DatabaseList []Database
 }
 
-// ServerConfiguration is the data structure engaged for save the server configuration
-type ServerConfiguration struct {
-	hostname       string
-	port           int
-	ConnectionMode mgo.Mode // Monotonic
-	RefreshMode    bool
-}
-
 // InitMongoDBConnection return a session to the Mongo instances configured in input.
 // If input is null connect to the default instances
-func InitMongoDBConnection(cfgServer *ServerConfiguration) *mgo.Session {
-	if cfgServer == nil {
-		cfgServer = &ServerConfiguration{hostname: "127.0.0.1", ConnectionMode: mgo.Monotonic, RefreshMode: false}
-		log.Warn("Using default configuration! | Conf: ", cfgServer)
-	}
-	log.Warn("Connecting to MongoDB using: ", cfgServer)
-	session, err := mgo.Dial(cfgServer.hostname) // Connection to MongoDB
+func InitMongoDBConnection(host string, port int, connectionMode string, refreshMode bool) *mgo.Session {
+	log.Warn("InitMongoDBConnection | Connecting to MongoDB using: ", host)
+	session, err := mgo.Dial(host) // Connection to MongoDB
 	if err != nil {
-		log.Error("Error! MongoDB does not reply! :/", session)
+		log.Error("InitMongoDBConnection | Error! MongoDB does not reply! :/", session)
 		return nil
 	}
-	log.Warn("Connection init finished! | ", session)
-	session.SetMode(cfgServer.ConnectionMode, cfgServer.RefreshMode) // Configuring MongoDB session
+	log.Warn("InitMongoDBConnection | Connection init finished succesfully! | ", session)
+	log.Info("InitMongoDBConnection | Running in Strong (secure read/write) mode")
+	session.SetMode(mgo.Strong, true) // Configuring MongoDB session
 	return session
 }
 
