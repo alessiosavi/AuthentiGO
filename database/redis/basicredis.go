@@ -8,7 +8,7 @@ import (
 )
 
 // ConnectToDb use emtpy string for hardcoded port
-func ConnectToDb(addr string, port string) (*redis.Client, error) {
+func ConnectToDb(addr string, port string) *redis.Client {
 	log.Debug("ConnectToDb | START")
 	if strings.Compare(addr, port) == 0 {
 		addr = "localhost"
@@ -22,14 +22,15 @@ func ConnectToDb(addr string, port string) (*redis.Client, error) {
 	log.Info("Connecting to -> ", client)
 	err := client.Ping().Err()
 	if err != nil {
-		log.Error("Impossibile to connecto to DB ....")
-		return nil, err
+		log.Fatal("Impossibile to connecto to DB ....| CLIENT: ", addr, ":", port, " | ERR: ", err)
+		return nil
 	}
-	return client, nil
+	return client
 }
 
 // GetValueFromDB is delegated to check if a key is alredy inserted and return the value
 func GetValueFromDB(client *redis.Client, key string) (bool, string) {
+	log.Debug("GetValueFromDB | START")
 	tmp, err := client.Get(key).Result()
 	if err == redis.Nil {
 		log.Warn("GetValueFromDB | Key -> ", key, " does not exist")
@@ -38,7 +39,7 @@ func GetValueFromDB(client *redis.Client, key string) (bool, string) {
 		log.Error("Fatal exception during retrieving of data [", key, "] | Redis: ", client)
 		panic(err)
 	} else {
-		log.Debug("GetValueFromDB | Key: ", key, " | Value: ", tmp)
+		log.Debug("GetValueFromDB | SUCCESS | Key: ", key, " | Value: ", tmp)
 		return true, tmp
 	}
 }
