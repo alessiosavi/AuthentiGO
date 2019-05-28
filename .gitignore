@@ -15,4 +15,13 @@
 # VSCODE ignore
 
 .vscode/*
+
+
+# Build file
 AuthentiGo
+
+# Log file
+log/
+
+# Conf file
+conf/

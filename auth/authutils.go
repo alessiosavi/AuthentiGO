@@ -49,12 +49,10 @@ type City struct {
 // data from MongoDB. If the data is found, then the password in input will be compared with the one retrieved from the database
 func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session) string {
 	log.Debug("LoginUserHTTP | Verify if user [", username, "] is registered ...")
-	//mongoClient := basicmongo.InitMongoDBConnection(nil) // Connect to the default (nil) database
 	if mongoClient == nil { // 10 seconds wait
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
-	//defer mongoClient.Close() // TODO: Possibile to do better ?
 	log.Info("LoginUserHTTP | Getting value from DB ...")
 	var User Person                                                                                     // Allocate a Person for store the DB result of next instruction
 	err := mongoClient.DB("GoLog-Customer").C("Customer").Find(bson.M{"Username": username}).One(&User) // Searching the user and assign the result (&) to User
@@ -98,7 +96,6 @@ func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) s
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
-	defer mongoClient.Close()
 	User := Person{Username: username, Password: password, Birthday: time.Now()}            // Create the user
 	return basicmongo.InsertData(User, mongoClient, "GoLog-Customer", "Customer", username) // Ask to a delegated function to insert the data
 }
@@ -107,15 +104,13 @@ func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) s
 // This method have only to verify if the token provided by the customer that use the API is present on RedisDB.
 // In first instance it try to validate the input data. Then will continue connecting to Redis in order to retrieve the token of
 // the customer. If the token is found, the customer is authorized to continue.
-func VerifyCookieFromRedisCoreHTTP(user, token string) string {
+func VerifyCookieFromRedisCoreHTTP(user, token string, redisClient *redis.Client) string {
+	log.Debug("VerifyCookieFromRedisCoreHTTP | START | User: ", user, " | Token: ", token)
 	if UsernameValidation(user) { // Verify that the credentials respect the rules
 		if TokenValidation(token) { // Verify that the token respect the rules
-			redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
-			if err != nil {
-				log.Error("VerifyCookieFromRedisCoreHTTP | Impossible to connect to Redis for store the token | CLIENT: ", redisClient, " | ERR: ", err)
-				return "REDIS_DB_UNAVAIBLE"
-			} // Retrieve the token for compare
+			log.Debug("VerifyCookieFromRedisCoreHTTP | Credential validated, retrieving token value from Redis ...")
 			check, dbToken := basicredis.GetValueFromDB(redisClient, user)
+			log.Debug("VerifyCookieFromRedisCoreHTTP | Data retrieved!")
 			if check {
 				if strings.Compare(dbToken, token) == 0 {
 					log.Info("VerifyCookieFromRedisCoreHTTP | Token MATCH!! User is logged! | ", user, " | ", token)
@@ -163,6 +158,7 @@ func ValidateCredentials(user string, pass string) bool {
 
 // PasswordValidation execute few check on the password in input
 func PasswordValidation(password string) bool {
+	log.Debug("PasswordValidation | START")
 	if strings.Compare(password, "") == 0 {
 		log.Warn("PasswordValidation | Password is empty :/")
 		return false
@@ -182,6 +178,7 @@ func PasswordValidation(password string) bool {
 
 // UsernameValidation execute few check on the username in input
 func UsernameValidation(username string) bool {
+	log.Debug("UsernameValidation | START")
 	if strings.Compare(username, "") == 0 {
 		log.Warn("UsernameValidation | Username is empty :/")
 		return false

@@ -5,9 +5,9 @@ import (
 	"crypto/cipher"
 	"crypto/md5"
 	"crypto/rand"
+	b64 "encoding/base64"
 	"encoding/hex"
 	"io"
-	"strings"
 )
 
 func Encrypt(data []byte, passphrase string) []byte {
@@ -51,10 +51,6 @@ func Decrypt(data []byte, passphrase string) []byte {
 
 // GenerateToken create a token for authenticate the request
 func GenerateToken(username string, password string) string {
-	return createHash(username + ":" + password)
-}
-
-// VerifyToken verify if the token is related to the current user
-func VerifyToken(data string, username string, password string) bool {
-	return strings.Compare(createHash(username+":"+password), data) == 0
+	//return createHash(username + ":" + password)
+	return b64.StdEncoding.EncodeToString(Encrypt([]byte(username), password))
 }

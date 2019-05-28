@@ -1,12 +1,16 @@
 package main
 
 import (
+	"flag"
 	"github.com/globalsign/mgo"
+	"github.com/go-redis/redis"
 	"github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
+	"os"
 
 	//Golang import
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -25,9 +29,23 @@ import (
 )
 
 // configuration is the structure for handle the configuration data
-type configuration struct {
-	Port int    // Port to bind the service
-	Host string // Hostname to bind the service
+type Configuration struct {
+	Host    string // Hostname to bind the service
+	Port    int    // Port to bind the service
+	Version string
+	Mongo   struct {
+		Host string
+		Port int
+	}
+	Redis struct {
+		Host string
+		Port string
+	}
+	Log struct {
+		Level string
+		Path  string
+		Name  string
+	}
 }
 
 // status Structure used for populate the json response for the RESTfull HTTP API
@@ -47,47 +65,69 @@ type middlewareRequest struct {
 }
 
 func main() {
+
+	// ==== SET LOGGING
 	Formatter := new(log.TextFormatter) //#TODO: Formatter have to be inserted in `configuration` in order to dinamically change debug level [at runtime?]
 	Formatter.TimestampFormat = "15-01-2018 15:04:05.000000"
 	Formatter.FullTimestamp = true
 	Formatter.ForceColors = true
 	log.AddHook(filename.NewHook()) // Print filename + line at every log
 	log.SetFormatter(Formatter)
-	log.SetLevel(log.FatalLevel)
-	mongoClient := basicmongo.InitMongoDBConnection(nil)
-	// TODO: Add configuration parameter
-	cfg := configuration{Port: 8090, Host: "localhost"}
-	handleRequests(cfg, mongoClient)
+
+	// ==== LOAD JSON CONF FILE
+	cfg := verifyCommandLineInput()
+	log.SetLevel(utils.SetDebugLevel(cfg.Log.Level))
+
+	// Log to File and STDOUT
+	logFile, err := os.Open(cfg.Log.Path + cfg.Log.Name)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+	mw := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(mw)
+
+	// ==== CONNECT TO MONGO ====
+	mongoClient := basicmongo.InitMongoDBConnection(cfg.Mongo.Host, cfg.Mongo.Port, "", true)
+	defer mongoClient.Close()
+
+	// ==== CONNECT TO REDIS ====
+	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port)
+	defer redisClient.Close()
+
+	handleRequests(cfg, mongoClient, redisClient)
 }
 
-// handleRequests Handler of the HTTP API
-func handleRequests(cfg configuration, mgoClient *mgo.Session) {
+// handleRequests Is delegated to map (BIND) the API methods to the HTTP URL
+// It use a gzip handler that is usefull for reduce bandwitch usage while interacting with the middleware function
+func handleRequests(cfg Configuration, mgoClient *mgo.Session, redisClient *redis.Client) {
 	m := func(ctx *fasthttp.RequestCtx) {
-		ctx.Response.Header.Set("AuthentiGo", "v0.1.0$/alpha")
+		ctx.Response.Header.Set("AuthentiGo", "$v0.1.1")
 		log.Info("REQUEST --> ", ctx, " | Headers: ", ctx.Request.Header.String(), " | Body: ", ctx.PostBody())
 		switch string(ctx.Path()) {
 		case "/middleware":
-			middleware(ctx)
+			middleware(ctx, redisClient)
 		case "/benchmark":
 			fastBenchmarkHTTP(ctx) // Benchmark API
 		case "/auth/login":
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
-			AuthLoginWrapper(ctx, mgoClient) // Login functionality [Test purpouse]
+			AuthLoginWrapper(ctx, mgoClient, redisClient) // Login functionality [Test purpouse]
 		case "/auth/register":
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
 			AuthRegisterWrapper(ctx, mgoClient) // Register an user into the DB [Test purpouse]
 		case "/auth/verify":
-			VerifyCookieFromRedisHTTP(ctx) // Verify if an user is authorized to use the services
+			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if an user is authorized to use the services
 		default:
 			ctx.Response.SetStatusCode(404)
 			ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
 			fastBenchmarkHTTP(ctx)
 		}
 	}
-	// The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
+	// NOTE: The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
 	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestSpeed)      // Compress data before sending (if requested by the client)
 	err := fasthttp.ListenAndServe(cfg.Host+":"+strconv.Itoa(cfg.Port), gzipHandler) // Try to start the server with input "host:port" received in input
 	if err != nil {                                                                  // No luck, connection not succesfully. Probably port used ...
+		// Tricky method for bind to a port that is not used
 		log.Warn("Port ", cfg.Port, " seems used :/")
 		for i := 0; i < 10; i++ {
 			port := strconv.Itoa(utils.Random(8081, 8090)) // Generate a new port to use
@@ -97,34 +137,39 @@ func handleRequests(cfg configuration, mgoClient *mgo.Session) {
 			if err == nil {                                                // Connection estabileshed!
 				log.Info("HandleRequests | Connection estabilished @[", cfg.Host, ":", cfg.Port) // Not reached
 				break
+			} else {
+				log.Error("HandleRequests | Seems that [#", "] is used ... | ERR: ", err)
 			}
 		}
 	}
 	log.Trace("HandleRequests | STOP")
 }
 
-//AuthLoginWrapper is the authentication wrapper for login functionality. It allow the customers that have completed the registration phase to login into the services.
+//AuthLoginWrapper is the authentication wrapper for login functionality. It allow the customers that have completed the registration phase to login and receive the mandatory
+// token for interact with the services
 // In order to be compliant with as many protocol as possibile, the method try find the two parameter needed (user,pass) sequentially from:
 // BasicAuth headers; query args; GET args; POST args. It manage few error cause just for debug purpouse
-func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
+// The login functionality can be accomplished using different methods:
+// BasichAuth headers: example ->from browser username:password@$URL/auth/login| curl -vL --user "username:password $URL/auth/login"
+// GET Request: example -> from browser $URL/auth/login?user=username&pass=password | curl -vL $URL/auth/login?user=username&pass=password
+// POST Request: example -> curl -vL $URL/auth/login -d 'user=username&pass=password'
+func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisClient *redis.Client) {
+	log.Info("AuthLoginWrapper | Starting authentication")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request
+	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request from BasicAuth headers, GET & POST
 	if authutils.ValidateCredentials(username, password) { // Verify if the input parameter respect the rules ...
+		log.Debug("AuthLoginWrapper | Input validated | User: ", username, " | Pass: ", password, " | Calling core functionalities ...")
 		check := authutils.LoginUserCoreHTTP(username, password, mgoClient) // Login phase
 		if strings.Compare(check, "OK") == 0 {                              // Login Succeed
-			token := basiccrypt.GenerateToken(username, password)             // Generate a simple md5 hashed token
-			ctx.Response.Header.SetCookie(CreateCookie("GoLog-Token", token)) // Set the token into the cookie headers
-			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
+			log.Debug("AuthLoginWrapper | Login succesfully! Generating token!")
+			token := basiccrypt.GenerateToken(username, password) // Generate a simple md5 hashed token
 			log.Info("AuthLoginWrapper | Inserting token into Redis ", token)
-			redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
-			if err != nil {
-				log.Error("AuthLoginWrapper | Impossible to connect to Redis for store the token | CLIENT: ", redisClient, " | ERR: ", err)
-				json.NewEncoder(ctx).Encode(status{Status: false, Description: "Unable to connect to RedisDB", ErrorCode: check, Data: redisClient})
-				return
-			} // Store the token for future auth check
 			basicredis.InsertIntoClient(redisClient, username, token) // insert the token into the DB
-			log.Info("AuthLoginWrapper | Token inserted! All operation finished correctly!")
-
+			log.Info("AuthLoginWrapper | Token inserted! All operation finished correctly! | Setting token into response")
+			authcookie := CreateCookie("GoLog-Token", token)
+			ctx.Response.Header.SetCookie(authcookie)     // Set the token into the cookie headers
+			ctx.Response.Header.Set("GoLog-Token", token) // Set the token into a custom headers for future security improvments
+			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
 			json.NewEncoder(ctx).Encode(status{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
 		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input does not match with rules
 			log.Error("AuthLoginWrapper | Input does not respect the rules :/! | ", username, ":", password)
@@ -151,9 +196,11 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
 //AuthRegisterWrapper is the authentication wrapper for register the client into the service.
 //It have to parse the credentials of the customers and register the username and the password into the DB.
 func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
+	log.Debug("AuthRegisterWrapper | Starting register functionalities! | Parsing username and password ...")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request
 	if authutils.ValidateCredentials(username, password) {
+		log.Debug("AuthRegisterWrapper | Input validated | User: ", username, " | Pass: ", password, " | Calling core functionalities ...")
 		check := authutils.RegisterUserCoreHTTP(username, password, mgoClient) // Registration phase, connect to MongoDB
 		if strings.Compare(check, "OK") == 0 {                                 // Registration Succeed
 			log.Warn("AuthRegisterWrapper | Registering new client! | ", username, ":", password)
@@ -182,11 +229,12 @@ func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
 // If the BasicAuth header is not provided, then the method will delegate the request to a function specialized for parse the data
 // from the body of the request
 func ParseAuthenticationCoreHTTP(ctx *fasthttp.RequestCtx) (string, string) {
-	log.Trace("ParseAuthenticationHTTP | START")
+	log.Debug("ParseAuthenticationHTTP | START")
 	basicAuthPrefix := []byte("Basic ")              // BasicAuth template prefix
 	auth := ctx.Request.Header.Peek("Authorization") // Get the Basic Authentication credentials from headers
 	log.Info("ParseAuthenticationHTTP | Auth Headers: [", string(auth), "]")
 	if bytes.HasPrefix(auth, basicAuthPrefix) { // Check if the login is executed using the BasicAuth headers
+		log.Debug("ParseAuthenticationHTTP | Loggin-in from BasicAuth headers ...")
 		return authutils.ParseAuthCredentialFromHeaders(auth) // Call the delegated method for extract the credentials from the Header
 	} // In other case call the delegated method for extract the credentials from the body of the Request
 	log.Info("ParseAuthenticationCoreHTTP | Credentials not in Headers, analyzing the body of the request ...")
@@ -195,11 +243,14 @@ func ParseAuthenticationCoreHTTP(ctx *fasthttp.RequestCtx) (string, string) {
 }
 
 // VerifyCookieFromRedisHTTP wrapper for verify if the user is logged
-func VerifyCookieFromRedisHTTP(ctx *fasthttp.RequestCtx) {
+func VerifyCookieFromRedisHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
+	go ctx.Response.Header.SetContentType("application/json; charset=utf-8") // Why not ? (:
+	log.Debug("VerifyCookieFromRedisHTTP | Retrieving username ...")
 	user, _ := ParseAuthenticationCoreHTTP(ctx)
+	log.Debug("VerifyCookieFromRedisHTTP | Retrieving token ...")
 	token := ParseTokenFromRequest(ctx)
-	auth := authutils.VerifyCookieFromRedisCoreHTTP(user, token) // Call the core function for recognize if the user have the token
-	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
+	log.Debug("VerifyCookieFromRedisHTTP | Retrieving cookie from redis ...")
+	auth := authutils.VerifyCookieFromRedisCoreHTTP(user, token, redisClient) // Call the core function for recognize if the user have the token
 	if strings.Compare(auth, "AUTHORIZED") == 0 {
 		json.NewEncoder(ctx).Encode(status{Status: true, Description: "Logged in!", ErrorCode: auth, Data: nil})
 	} else {
@@ -209,14 +260,16 @@ func VerifyCookieFromRedisHTTP(ctx *fasthttp.RequestCtx) {
 
 //CreateCookie Method that return a cookie valorized as input (GoLog-Token as key)
 func CreateCookie(key string, value string) *fasthttp.Cookie {
-	authCookie := fasthttp.Cookie{}
 	if strings.Compare(key, "") == 0 {
-		authCookie.SetKey("GoLog-Token")
-	} else {
-		authCookie.SetKey(key)
+		key = "GoLog-Token"
 	}
+	log.Debug("CreateCookie | Creating Cookie | Key: ", key, " | Val: ", value)
+	authCookie := fasthttp.Cookie{}
+	authCookie.SetKey(key)
 	authCookie.SetValue(value)
 	authCookie.SetMaxAge(30) // Set 30 seconds expiration
+	authCookie.SetHTTPOnly(true)
+	authCookie.SetSameSite(fasthttp.CookieSameSiteLaxMode)
 	return &authCookie
 }
 
@@ -233,7 +286,6 @@ func RedirectCookie(ctx *fasthttp.RequestCtx) string {
 
 // ParseAuthCredentialsFromRequestBody is delegated to extract the username and the password from the request body
 func ParseAuthCredentialsFromRequestBody(ctx *fasthttp.RequestCtx) (string, string) {
-	log.Debug("ParseAuthCredentialsFromRequestBody | START")
 	user := string(ctx.FormValue("user")) // Extracting data from request
 	pass := string(ctx.FormValue("pass"))
 	return user, pass
@@ -268,7 +320,7 @@ func fastBenchmarkHTTP(ctx *fasthttp.RequestCtx) {
 //middleware is the function delegated to take in charge the request of the customer, be sure that is logged in, then call
 // the external service that the user want to contat. If the customers is authorized (token proved in request match with the one retrieved)
 // from Redis), the query will be executed and the result will be showed back as a response.
-func middleware(ctx *fasthttp.RequestCtx) {
+func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	log.Info("CTX: ", string(ctx.PostBody())) // Logging the arguments of the request
 	var req middlewareRequest
@@ -277,8 +329,8 @@ func middleware(ctx *fasthttp.RequestCtx) {
 	log.Debug("Validating request ...")
 	if validateMiddlewareRequest(req) { // Verify it the json is valid
 		log.Info("Request valid! Verifying token from Redis ...")
-		auth := authutils.VerifyCookieFromRedisCoreHTTP(req.Username, req.Token) // Call the core function for recognize if the user have the token
-		if strings.Compare(auth, "AUTHORIZED") == 0 {                            // Token in redis, call the external service..
+		auth := authutils.VerifyCookieFromRedisCoreHTTP(req.Username, req.Token, redisClient) // Call the core function for recognize if the user have the token
+		if strings.Compare(auth, "AUTHORIZED") == 0 {                                         // Token in redis, call the external service..
 			log.Info("REQUEST OK> ", req)
 			log.Warn("Using service ", req.Method, " | ARGS: ", req.Data, " | Token: ", req.Token, " | USR: ", req.Username)
 			ctx.Write(sendGet(req))
@@ -329,4 +381,28 @@ func sendGet(request middlewareRequest) []byte {
 	log.Info("response Body:", string(body))
 
 	return body
+}
+
+// VerifyCommandLineInput is delegated to manage the inputer parameter provide with the input flag from command line
+func verifyCommandLineInput() Configuration {
+	log.Debug("verifyCommandLineInput | Init a new configuration from the conf file")
+	c := flag.String("config", "./conf/test.json", "Specify the configuration file.")
+	flag.Parse()
+	if strings.Compare(*c, "") == 0 {
+		log.Fatal("verifyCommandLineInput | Call the tool using --config conf/config.json")
+	}
+	file, err := os.Open(*c)
+	if err != nil {
+		log.Fatal("can't open config file: ", err)
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	cfg := Configuration{}
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		log.Fatal("can't decode config JSON: ", err)
+	}
+	log.Debug("Conf loaded -> ", cfg)
+
+	return cfg
 }
