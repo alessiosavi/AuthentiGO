@@ -6,7 +6,7 @@
         "Path": "./conf/ssl/",
         "Cert": "localhost.crt",
         "Key": "localhost.key",
-        "Enabled": false
+        "Enabled": true
     },
     "Mongo": {
         "Host": "127.0.0.1",
