@@ -34,7 +34,7 @@ script:
   - ls
   - go build
   - redis-cli ping
-  -  nohup ./Authentigo &
+  - nohup go run authentigo.go &
   - curl -L -s -v https://127.0.0.1:8090/auth/login?user=alessio1234&pass=test1234
   - curl -L -s -v https://127.0.0.1:8090/auth/register?user=alessio1234&pass=test1234
   - curl -L -s -v https://127.0.0.1:8090/auth/login?user=alessio1234&pass=test1234
