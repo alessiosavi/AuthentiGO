@@ -5,15 +5,14 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/go-redis/redis"
 	"github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
+	"github.ibm.com/Alessio-Savi/AuthentiGo/utils"
 	"os"
 
 	//Golang import
 	"bytes"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 
 	// Internal import
@@ -33,7 +32,13 @@ type Configuration struct {
 	Host    string // Hostname to bind the service
 	Port    int    // Port to bind the service
 	Version string
-	Mongo   struct {
+	SSL     struct {
+		Path    string
+		Cert    string
+		Key     string
+		Enabled bool
+	}
+	Mongo struct {
 		Host string
 		Port int
 	}
@@ -78,15 +83,6 @@ func main() {
 	cfg := verifyCommandLineInput()
 	log.SetLevel(utils.SetDebugLevel(cfg.Log.Level))
 
-	// Log to File and STDOUT
-	logFile, err := os.Open(cfg.Log.Path + cfg.Log.Name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer logFile.Close()
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
-
 	// ==== CONNECT TO MONGO ====
 	mongoClient := basicmongo.InitMongoDBConnection(cfg.Mongo.Host, cfg.Mongo.Port, "", true)
 	defer mongoClient.Close()
@@ -95,6 +91,7 @@ func main() {
 	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port)
 	defer redisClient.Close()
 
+	log.Info("main | Spawing API services")
 	handleRequests(cfg, mongoClient, redisClient)
 }
 
@@ -102,7 +99,13 @@ func main() {
 // It use a gzip handler that is usefull for reduce bandwitch usage while interacting with the middleware function
 func handleRequests(cfg Configuration, mgoClient *mgo.Session, redisClient *redis.Client) {
 	m := func(ctx *fasthttp.RequestCtx) {
-		ctx.Response.Header.Set("AuthentiGo", "$v0.1.1")
+		if cfg.SSL.Enabled {
+			httputils.SecureRequest(ctx, true)
+		} else {
+			httputils.SecureRequest(ctx, false)
+		}
+
+		ctx.Response.Header.Set("AuthentiGo", "$v0.1.2")
 		log.Info("REQUEST --> ", ctx, " | Headers: ", ctx.Request.Header.String(), " | Body: ", ctx.PostBody())
 		switch string(ctx.Path()) {
 		case "/middleware":
@@ -116,32 +119,29 @@ func handleRequests(cfg Configuration, mgoClient *mgo.Session, redisClient *redi
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
 			AuthRegisterWrapper(ctx, mgoClient) // Register an user into the DB [Test purpouse]
 		case "/auth/verify":
-			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if an user is authorized to use the services
+			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if an user is authorized to use the service
+		case "/test/crypt":
+			CryptDataHTTPWrapper(ctx)
+		case "/test/decrypt":
+			DecryptDataHTTPWrapper(ctx)
 		default:
 			ctx.Response.SetStatusCode(404)
 			ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
 			fastBenchmarkHTTP(ctx)
 		}
 	}
-	// NOTE: The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
-	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestSpeed)      // Compress data before sending (if requested by the client)
-	err := fasthttp.ListenAndServe(cfg.Host+":"+strconv.Itoa(cfg.Port), gzipHandler) // Try to start the server with input "host:port" received in input
-	if err != nil {                                                                  // No luck, connection not succesfully. Probably port used ...
-		// Tricky method for bind to a port that is not used
-		log.Warn("Port ", cfg.Port, " seems used :/")
-		for i := 0; i < 10; i++ {
-			port := strconv.Itoa(utils.Random(8081, 8090)) // Generate a new port to use
-			log.Info("Round ", strconv.Itoa(i), "]No luck! Connecting to anotother random port [@", port, "] ...")
-			cfg.Port, _ = strconv.Atoi(port)                               // Updating the configuration with the new port used
-			err := fasthttp.ListenAndServe(cfg.Host+":"+port, gzipHandler) // Trying with the random port generate few step above
-			if err == nil {                                                // Connection estabileshed!
-				log.Info("HandleRequests | Connection estabilished @[", cfg.Host, ":", cfg.Port) // Not reached
-				break
-			} else {
-				log.Error("HandleRequests | Seems that [#", "] is used ... | ERR: ", err)
-			}
-		}
+	// ==== GZIP HANDLER ====
+	// The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
+	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestSpeed) // Compress data before sending (if requested by the client)
+	log.Info("HandleRequests | Binding services to @[", cfg.Host, ":", cfg.Port)
+
+	// ==== SSL HANDLER + GZIP if requested ====
+	if cfg.SSL.Enabled {
+		httputils.ListAndServerSSL(cfg.Host, cfg.SSL.Path, cfg.SSL.Cert, cfg.SSL.Key, cfg.Port, gzipHandler)
 	}
+	// ==== Simple GZIP HANDLER ====
+	httputils.ListAndServerGZIP(cfg.Host, cfg.Port, gzipHandler)
+
 	log.Trace("HandleRequests | STOP")
 }
 
@@ -154,7 +154,7 @@ func handleRequests(cfg Configuration, mgoClient *mgo.Session, redisClient *redi
 // GET Request: example -> from browser $URL/auth/login?user=username&pass=password | curl -vL $URL/auth/login?user=username&pass=password
 // POST Request: example -> curl -vL $URL/auth/login -d 'user=username&pass=password'
 func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisClient *redis.Client) {
-	log.Info("AuthLoginWrapper | Starting authentication")
+	log.Info("AuthLoginWrapper | Starting authentication | Parsing authentication credentials")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request from BasicAuth headers, GET & POST
 	if authutils.ValidateCredentials(username, password) { // Verify if the input parameter respect the rules ...
@@ -344,14 +344,53 @@ func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 
 // validateMiddlewareRequest is developed in order to verify it the request from the customer is valid. Can be view as a "filter"
 func validateMiddlewareRequest(request middlewareRequest) bool {
-	if authutils.UsernameValidation(request.Username) { // Validate the username
-		if authutils.TokenValidation(request.Token) { // Validate the token
+	if authutils.ValidateUsername(request.Username) { // Validate the username
+		if authutils.ValidateToken(request.Token) { // Validate the token
 			if strings.Compare(request.Method, "") != 0 { // Verify if the request is not empty
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func CryptDataHTTPWrapper(ctx *fasthttp.RequestCtx) {
+	log.Debug("CryptDataHTTPWrapper | Retrieving username and password ...")
+	user, psw := ParseAuthenticationCoreHTTP(ctx)
+	log.Debug("CryptDataHTTPWrapper | Retrieving token ...")
+	token := ParseTokenFromRequest(ctx)
+
+	log.Debug("CryptDataHTTPWrapper | Validating credentials ... ")
+	if authutils.ValidateCredentials(user, psw) {
+		log.Debug("CryptDataHTTPWrapper | Validating token ... ")
+		if authutils.ValidateToken(token) {
+			chiper_text := basiccrypt.Encrypt([]byte(user+":"+psw), psw)
+			log.Debug("Chiper: " + chiper_text)
+		}
+	}
+
+	// if strings.Compare(auth, "AUTHORIZED") == 0 {
+	// 	json.NewEncoder(ctx).Encode(status{Status: true, Description: "Logged in!", ErrorCode: auth, Data: nil})
+	// } else {
+	// 	json.NewEncoder(ctx).Encode(status{Status: false, Description: "Not logged in!", ErrorCode: auth, Data: nil})
+	// }
+
+}
+
+func DecryptDataHTTPWrapper(ctx *fasthttp.RequestCtx) {
+	log.Debug("DecryptDataHTTPWrapper | Retrieving username and password ...")
+	user, psw := ParseAuthenticationCoreHTTP(ctx)
+	log.Debug("DecryptDataHTTPWrapper | Retrieving token ...")
+	token := ParseTokenFromRequest(ctx)
+
+	log.Debug("DecryptDataHTTPWrapper | Validating credentials ... ")
+	if authutils.ValidateCredentials(user, psw) {
+		log.Debug("DecryptDataHTTPWrapper | Validating token ... ")
+		if authutils.ValidateToken(token) {
+			plain := basiccrypt.Decrypt(token, psw)
+			log.Debug("Plain: " + plain)
+		}
+	}
 }
 
 // sendGet is developed in order to forward the input request to the service and return the response

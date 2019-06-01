@@ -2,6 +2,12 @@
     "Host": "127.0.0.1",
     "Port": 8090,
     "Version": "v0.1.1",
+    "SSL": {
+        "Path": "./conf/ssl/",
+        "Cert": "localhost.crt",
+        "Key": "localhost.key",
+        "Enabled": false
+    },
     "Mongo": {
         "Host": "127.0.0.1",
         "Port": 27017

@@ -1,0 +1,40 @@
+language: go
+
+go:
+  - "1.12.4"
+
+os:
+  - linux
+  - osx
+
+sudo: false
+
+branches:
+  only:
+  - master
+
+services:
+  - mongodb
+  - redis-server
+
+
+install: true
+
+script:
+  - go get -v -u github.com/valyala/fasthttp
+  - go get -v -u github.com/valyala/gozstd
+  - go get -v -u github.com/sirupsen/logrus
+  - go get -v -u github.com/onrik/logrus/filename
+  - go get -v -u github.com/go-redis/redis
+  - go get -v -u github.com/globalsign/mgo
+  - go get -v -u github.com/globalsign/mgo/bson
+  
+  - pwd
+  - ls
+  - go build
+  - redis-cli ping
+  -  nohup ./Authentigo &
+  - curl -L -s -v http://127.0.0.1:8090/auth/login?user=alessio1234&pass=test1234
+  - curl -L -s -v http://127.0.0.1:8090/auth/register?user=alessio1234&pass=test1234
+  - curl -L -s -v http://127.0.0.1:8090/auth/login?user=alessio1234&pass=test1234
+  - pkill Authentigo

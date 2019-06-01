@@ -106,11 +106,11 @@ func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) s
 // the customer. If the token is found, the customer is authorized to continue.
 func VerifyCookieFromRedisCoreHTTP(user, token string, redisClient *redis.Client) string {
 	log.Debug("VerifyCookieFromRedisCoreHTTP | START | User: ", user, " | Token: ", token)
-	if UsernameValidation(user) { // Verify that the credentials respect the rules
-		if TokenValidation(token) { // Verify that the token respect the rules
+	if ValidateUsername(user) { // Verify that the credentials respect the rules
+		if ValidateToken(token) { // Verify that the token respect the rules
 			log.Debug("VerifyCookieFromRedisCoreHTTP | Credential validated, retrieving token value from Redis ...")
 			check, dbToken := basicredis.GetValueFromDB(redisClient, user)
-			log.Debug("VerifyCookieFromRedisCoreHTTP | Data retrieved!")
+			log.Trace("VerifyCookieFromRedisCoreHTTP | Data retrieved!")
 			if check {
 				if strings.Compare(dbToken, token) == 0 {
 					log.Info("VerifyCookieFromRedisCoreHTTP | Token MATCH!! User is logged! | ", user, " | ", token)
@@ -150,7 +150,7 @@ func ParseAuthCredentialFromHeaders(auth []byte) (string, string) {
 
 // ValidateCredentials is wrapper for the multiple method for validate the input parameters
 func ValidateCredentials(user string, pass string) bool {
-	if UsernameValidation(user) && PasswordValidation(pass) {
+	if ValidateUsername(user) && PasswordValidation(pass) {
 		return true
 	}
 	return false
@@ -158,7 +158,6 @@ func ValidateCredentials(user string, pass string) bool {
 
 // PasswordValidation execute few check on the password in input
 func PasswordValidation(password string) bool {
-	log.Debug("PasswordValidation | START")
 	if strings.Compare(password, "") == 0 {
 		log.Warn("PasswordValidation | Password is empty :/")
 		return false
@@ -176,37 +175,36 @@ func PasswordValidation(password string) bool {
 	return true
 }
 
-// UsernameValidation execute few check on the username in input
-func UsernameValidation(username string) bool {
-	log.Debug("UsernameValidation | START")
+// ValidateUsername execute few check on the username in input
+func ValidateUsername(username string) bool {
 	if strings.Compare(username, "") == 0 {
-		log.Warn("UsernameValidation | Username is empty :/")
+		log.Warn("ValidateUsername | Username is empty :/")
 		return false
 	}
 	if len(username) < 4 || len(username) > 32 {
-		log.Warn("UsernameValidation | Username len not valid")
+		log.Warn("ValidateUsername | Username len not valid")
 		return false
 	}
 	myReg := regexp.MustCompile("^[a-zA-Z0-9]{4,32}$") // The string have to contains ONLY (letter OR number)
 	if !myReg.MatchString(username) {                  // the input doesn't match the regexp
-		log.Warn("UsernameValidation | Username have strange character :/ [", username, "]")
+		log.Warn("ValidateUsername | Username have strange character :/ [", username, "]")
 		return false
 	}
-	log.Info("UsernameValidation | Username [", username, "] VALIDATED!")
+	log.Info("ValidateUsername | Username [", username, "] VALIDATED!")
 	return true
 }
 
-// TokenValidation execute few check on the token in input
-func TokenValidation(token string) bool {
-	log.Debug("Validating [", token, "] ...")
+// ValidateToken execute few check on the token in input
+func ValidateToken(token string) bool {
+	log.Debug("ValidateToken | Validating [", token, "] ...")
 	if strings.Compare(token, "") == 0 {
-		log.Warn("TokenValidation | Token is empty :/")
+		log.Warn("ValidateToken | Token is empty :/")
 		return false
 	}
-	if len(token) != 32 { // md5 32 char
-		log.Warn("TokenValidation | Token len != 32 :/")
+	if len(token) != 52 {
+		log.Warn("ValidateToken | Token len != 52 :/ [found ", len(token), "]")
 		return false
 	}
-	log.Info("TokenValidation | Token [", token, "] VALIDATED!")
+	log.Info("ValidateToken | Token [", token, "] VALIDATED!")
 	return true
 }
