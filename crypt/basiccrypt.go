@@ -10,7 +10,9 @@ import (
 	"io"
 )
 
-func Encrypt(data []byte, passphrase string) []byte {
+// Encrypt is delegated to crypt the data in input with the given password
+
+func Encrypt(data []byte, passphrase string) string {
 	block, _ := aes.NewCipher([]byte(createHash(passphrase)))
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
@@ -21,7 +23,7 @@ func Encrypt(data []byte, passphrase string) []byte {
 		panic(err.Error())
 	}
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	return ciphertext
+	return b64.StdEncoding.EncodeToString(ciphertext)
 }
 
 func createHash(key string) string {
@@ -30,27 +32,32 @@ func createHash(key string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func Decrypt(data []byte, passphrase string) []byte {
+func Decrypt(data string, passphrase string) string {
 	key := []byte(createHash(passphrase))
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
 	}
+
+	raw, err1 := b64.StdEncoding.DecodeString(data)
+	if err1 != nil {
+		panic(err1.Error())
+	}
+
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		panic(err.Error())
 	}
 	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	nonce, ciphertext := raw[:nonceSize], raw[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		panic(err.Error())
 	}
-	return plaintext
+	return string(plaintext)
 }
 
 // GenerateToken create a token for authenticate the request
 func GenerateToken(username string, password string) string {
-	//return createHash(username + ":" + password)
-	return b64.StdEncoding.EncodeToString(Encrypt([]byte(username), password))
+	return Encrypt([]byte(username+":"+password), password)
 }
