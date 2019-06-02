@@ -9,7 +9,7 @@ Simple Golang tool that work as a "plug-and-play" executable for authenticate yo
 
 ### Documentation
 
-[![Online documentation](https://pages.github.ibm.com/Alessio-Savi/AuthentiGo/)]
+[Online documentation](https://pages.github.ibm.com/Alessio-Savi/AuthentiGo/)
 
 During the development of every internal tools, 90% of the time it's request to create an "__*authentication layer*__" in order to restrict the access to the services only to the person admitted.
 
@@ -137,13 +137,14 @@ In order to install MongoDB (and some related usefull utils), you have to run th
 __*The following operations have to be done as root*__
 
     ```bash
-    mkdir /opt/MongoDB
-    cd $_
-    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-4.0.5-1.el7.x86_64.rpm
-    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-4.0.5-1.el7.x86_64.rpm
-    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-4.0.5-1.el7.x86_64.rpm
-
-    for i in $(ls); do echo "|Installing ==== $i ====|"; rpm -ivh $i ; done
+    mkdir -p /opt/RPMs/MONGO
+    cd /opt/RPMs/MONGO
+    MONGO_VERSION="4.0.9-1.el7.x86_64"
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-$MONGO_VERSION.rpm
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-mongos-$MONGO_VERSION.rpm
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-$MONGO_VERSION.rpm
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-$MONGO_VERSION.rpm
+    for i in $(ls); do echo "|Installing ==== $i ====|"; sudo rpm -Uvh $i ; done
 
     sudo service mongod start
     ```
@@ -157,11 +158,16 @@ __*The following operations have to be done as root*__
     ```bash
     mkdir /opt/Redis
     cd $_
-    wget http://download.redis.io/releases/redis-5.0.3.tar.gz
-    tar xf redis-5.0.3.tar.gz
-    cd redis-5.0.3.tar.gz
+    REDIS_VERSION="5.0.4"
+    wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
+    tar xf redis-$REDIS_VERSION.tar.gz
+    cd redis-$REDIS_VERSION
+    for i in `find . -type f | grep -v git` ; do sed -i 's/-O[[:digit:]]/-Ofast/g' $i ; done
     make
     make install
+    echo 512 > /proc/sys/net/core/somaxconn
+    echo vm.overcommit_memory = 1 >> /etc/sysctl.conf
+    sysctl -p
     ```
 
 __*AUTOMATED CONFIGURATION*__:
