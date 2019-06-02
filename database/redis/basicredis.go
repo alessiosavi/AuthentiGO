@@ -2,6 +2,7 @@ package basicredis
 
 import (
 	"strings"
+	"time"
 
 	"github.com/go-redis/redis"
 	log "github.com/sirupsen/logrus"
@@ -38,16 +39,35 @@ func GetValueFromDB(client *redis.Client, key string) (bool, string) {
 		return false, tmp
 	}
 	log.Error("GetValueFromDB | Fatal exception during retrieving of data [", key, "] | Redis: ", client)
-	panic(err)
+	panic(err) // Waiting ...
+}
 
+// RemoveValueFromDB is delegated to check if a key is alredy inserted and return the value
+func RemoveValueFromDB(client *redis.Client, key string) bool {
+	err := client.Del(key).Err()
+	if err == nil {
+		log.Debug("RemoveValueFromDB | SUCCESS | Key: ", key, " | Removed")
+		return true
+	} else if err == redis.Nil {
+		log.Warn("RemoveValueFromDB | Key -> ", key, " does not exist")
+		return false
+	}
+	log.Error("RemoveValueFromDB | Fatal exception during retrieving of data [", key, "] | Redis: ", client)
+	panic(err) // Waiting ...
 }
 
 // InsertIntoClient set the two value into the Databased pointed from the client
-func InsertIntoClient(client *redis.Client, key string, value string) bool {
+func InsertIntoClient(client *redis.Client, key string, value string, expire int) bool {
 	log.Info("InsertIntoClient | Inserting -> (", key, ":", value, ")")
 	err := client.Set(key, value, 0).Err() // Inserting the values into the DB
 	if err != nil {
 		panic(err) //return false
+	}
+	duration := time.Second * time.Duration(expire)
+	log.Debug("InsertIntoClient | Setting ", expire, " seconds as expire time | Duration: ", duration)
+	err1 := client.Expire(key, duration)
+	if err1.Err() != nil {
+		log.Fatal("Unable to set expiration time ... | Err: ", err1) //return false
 	}
 	log.Info("InsertIntoClient | INSERTED SUCCESFULLY!! | (", key, ":", value, ")")
 	return true

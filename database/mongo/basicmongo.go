@@ -39,14 +39,18 @@ func RemoveCollectionFromDB(session *mgo.Session, database string, collection st
 
 // InsertData is used for insert a generic data into a collection
 // It take in input the session, database and collection where insert the change
-func InsertData(User interface{}, session *mgo.Session, database, collection, username string) string {
-	log.Info("InsertData | Inserting Data into DB: ", database, " | Collection: ", collection)
+func InsertData(User datastructures.Person, session *mgo.Session, database, collection, username string) string {
+	log.Info("InsertData | Verify if customer is alredy registered in DB: ", database, " | Collection: ", collection)
 	err := session.DB(database).C(collection).Find(bson.M{"Username": username}).Select(bson.M{"Username": 1}).One(nil) // Searching the user
-	log.Warn("InsertData | Dumping result from DB: ", User, " | ERROR: ", err)
+	log.Warn("InsertData | ", err)
 	if err != nil { // User is not present into the DB
-		log.Debug("InsertData | Registering new client! | ", User)
-		session.DB(database).C(collection).Insert(User)
-		log.Debug("InsertData | Client registered! | ", User)
+		log.Debug("InsertData | Registering new client ...")
+		err = session.DB(database).C(collection).Insert(User)
+		if err != nil {
+			log.Error("InsertData | Some error occurs during insert, impossible to register a new Customer :/ | Err: ", err)
+			return "KO"
+		}
+		log.Warning("InsertData | Client registered! | ", User)
 		return "OK"
 	}
 	log.Error("InsertData | Client alredy exists! | ", User, " | ERR: ", err)

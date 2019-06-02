@@ -28,7 +28,8 @@ type Configuration struct {
 		Host  string
 		Port  string
 		Token struct {
-			DB int
+			Expire int
+			DB     int
 		}
 	}
 	Log struct {
