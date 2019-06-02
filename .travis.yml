@@ -31,7 +31,7 @@ script:
   - ls
   - redis-cli ping
   - go build
-  - ./AuthentiGo 2&>1&> log.out
+  - ./AuthentiGo 2&>1&> log.out &
   - go test -v test/authentigo_test.go
   - pkill AuthentiGo
   - cat log.out
