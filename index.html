@@ -16,7 +16,7 @@
     <header>
       <div class="container">
         <h1>Authentigo</h1>
-        <h2>Plug and play authentication layer higly customizable written pure golang</h2>
+        <h2>Plug and play authentication layer higly customizable written (why not?) in pure golang</h2>
 
         <section id="downloads">
           <a href="https://github.ibm.com/Alessio-Savi/AuthentiGo" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
@@ -28,10 +28,13 @@
       <section id="main_content">
         <h1>
 <a id="authentigo" class="anchor" href="#authentigo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>AuthentiGo</h1>
-<p><a href="https://travis.ibm.com/Alessio-Savi/GoLogAnalyzer"><img src="https://travis.ibm.com/Alessio-Savi/GoLogAnalyzer.svg?token=wWmbVrxsSXYSyYLLhamH&amp;branch=master" alt="Build Status"></a></p>
+<p><a href="https://github.ibm.com/Alessio-Savi/AuthentiGo"><img src="https://travis.ibm.com/Alessio-Savi/AuthentiGo.svg?token=wWmbVrxsSXYSyYLLhamH&amp;branch=master" alt="Build Status"></a></p>
 <p>Simple Golang tool that work as a "plug-and-play" executable for authenticate your webapplication</p>
 <h2>
 <a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Getting Started</h2>
+<h3>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Documentation</h3>
+<p><a href="https://pages.github.ibm.com/Alessio-Savi/AuthentiGo/">Online documentation</a></p>
 <p>During the development of every internal tools, 90% of the time it's request to create an "<strong><em>authentication layer</em></strong>" in order to restrict the access to the services only to the person admitted.</p>
 <p>In some circonstances you can simply pick up an external webserver (like <em>nginx/apache/happroxy</em>) and <em>proxypass/reroute</em> the service. If you are the root of the machine you can also forward the traffic only to the people admitted to receive it by <em>forwarding</em> the TCP traffic only to the customer allowed.</p>
 <p>But what in case that you are a little IT Specials that <em>can't touch the enviroinment</em> and <em>want to restrict the access to a service using an <strong>authentication layer</strong></em>?</p>
@@ -124,8 +127,7 @@
 </ul>
 </li>
 </ul>
-<div class="highlight highlight-source-shell"><pre>
-golang_version=<span class="pl-s"><span class="pl-pds">"</span>1.11.4<span class="pl-pds">"</span></span>
+<div class="highlight highlight-source-shell"><pre>golang_version=<span class="pl-s"><span class="pl-pds">"</span>1.12.4<span class="pl-pds">"</span></span>
 golang_link=<span class="pl-s"><span class="pl-pds">"</span>https://dl.google.com/go/go<span class="pl-smi">$golang_version</span>.linux-amd64.tar.gz<span class="pl-pds">"</span></span>
 root_foolder=<span class="pl-s"><span class="pl-pds">"</span>/opt/GOLANG<span class="pl-pds">"</span></span> <span class="pl-c"><span class="pl-c">#</span> Set the tree variable needed for build the enviroinment</span>
 go_source=<span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$root_foolder</span>/go<span class="pl-pds">"</span></span>
@@ -152,31 +154,46 @@ go version</pre></div>
 <a id="2-install-mongodb" class="anchor" href="#2-install-mongodb" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2) Install MongoDB</h3>
 <p>In order to install MongoDB (and some related usefull utils), you have to run the following commands:</p>
 <p><strong><em>The following operations have to be done as root</em></strong></p>
-<div class="highlight highlight-source-shell"><pre>mkdir /opt/MongoDB
-<span class="pl-c1">cd</span> <span class="pl-smi">$_</span>
-wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-4.0.5-1.el7.x86_64.rpm
-wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-4.0.5-1.el7.x86_64.rpm
-wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-4.0.5-1.el7.x86_64.rpm
+<pre><code>```bash
+mkdir -p /opt/RPMs/MONGO
+cd /opt/RPMs/MONGO
+MONGO_VERSION="4.0.9-1.el7.x86_64"
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-$MONGO_VERSION.rpm
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-mongos-$MONGO_VERSION.rpm
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-$MONGO_VERSION.rpm
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-$MONGO_VERSION.rpm
+for i in $(ls); do echo "|Installing ==== $i ====|"; sudo rpm -Uvh $i ; done
 
-<span class="pl-k">for</span> <span class="pl-smi">i</span> <span class="pl-k">in</span> <span class="pl-s"><span class="pl-pds">$(</span>ls<span class="pl-pds">)</span></span><span class="pl-k">;</span> <span class="pl-k">do</span> <span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>|Installing ==== <span class="pl-smi">$i</span> ====|<span class="pl-pds">"</span></span><span class="pl-k">;</span> rpm -ivh <span class="pl-smi">$i</span> <span class="pl-k">;</span> <span class="pl-k">done</span>
-
-sudo service mongod start</pre></div>
+sudo service mongod start
+```
+</code></pre>
 <h3>
 <a id="3-install-redis" class="anchor" href="#3-install-redis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3) Install Redis</h3>
 <p>In order to compile Redis from source, you have to run the following commands:</p>
 <p><strong><em>The following operations have to be done as root</em></strong></p>
-<div class="highlight highlight-source-shell"><pre>mkdir /opt/Redis
-<span class="pl-c1">cd</span> <span class="pl-smi">$_</span>
-wget http://download.redis.io/releases/redis-5.0.3.tar.gz
-tar xf redis-5.0.3.tar.gz
-<span class="pl-c1">cd</span> redis-5.0.3.tar.gz
+<pre><code>```bash
+mkdir /opt/Redis
+cd $_
+REDIS_VERSION="5.0.4"
+wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
+tar xf redis-$REDIS_VERSION.tar.gz
+cd redis-$REDIS_VERSION
+for i in `find . -type f | grep -v git` ; do sed -i 's/-O[[:digit:]]/-Ofast/g' $i ; done
 make
-make install</pre></div>
+make install
+echo 512 &gt; /proc/sys/net/core/somaxconn
+echo vm.overcommit_memory = 1 &gt;&gt; /etc/sysctl.conf
+sysctl -p
+```
+</code></pre>
 <p><strong><em>AUTOMATED CONFIGURATION</em></strong>:</p>
 <p>Redis came with an usefull script for automatize the install the server.
 If you want to use the default configuration provided, use the following command:</p>
-<div class="highlight highlight-source-shell"><pre><span class="pl-c1">cd</span> utils
-bash install_server.sh</pre></div>
+<pre><code>```bash
+cd utils
+bash install_server.sh
+```
+</code></pre>
 <p>Now you have to press enter for confirm the default configuration location.</p>
 <h4>
 <a id="post-prerequisites" class="anchor" href="#post-prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Post Prerequisites</h4>
@@ -188,23 +205,28 @@ bash install_server.sh</pre></div>
 <a id="installing" class="anchor" href="#installing" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installing</h2>
 <p>The dependendencies used by the tool can be downloaded as following:
 NOTE:</p>
-<div class="highlight highlight-source-shell"><pre>  go get -v -u github.com/valyala/fasthttp
-  go get -v -u github.com/sirupsen/logrus
-  go get -v -u github.com/onrik/logrus/filename
-  go get -v -u github.com/go-redis/redis
-  go get -v -u github.com/globalsign/mgo
-  
-
-  go get -v -u github.ibm.com/Alessio-Savi/AuthentiGo <span class="pl-c"><span class="pl-c">#</span> Download the code</span></pre></div>
-<p>In case of problem, you have to download it manually</p>
-<div class="highlight highlight-source-shell"><pre>  <span class="pl-c1">cd</span> <span class="pl-smi">$GOPATH</span>/src
-  git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
-  git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
-  <span class="pl-c1">cd</span> AuthentiGo
-  go build</pre></div>
+<pre><code>```bash
+go get -v -u github.com/valyala/fasthttp
+go get -v -u github.com/valyala/gozstd
+go get -v -u github.com/sirupsen/logrus
+go get -v -u github.com/onrik/logrus/filename
+go get -v -u github.com/go-redis/redis
+go get -v -u github.com/globalsign/mgo
+go get -v -u github.com/globalsign/mgo/bson
+go get -v -u github.com/alessiosavi/GoUtils # Download the code
+```
+</code></pre>
+<p>Than you have to download it manually</p>
+<pre><code>```bash
+cd $GOPATH/src
+git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
+cd AuthentiGo
+go build
+```
+</code></pre>
 <h2>
 <a id="running-the-tests" class="anchor" href="#running-the-tests" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Running the tests</h2>
-<p>Unfortunatly no test are provided with the initial versione of the software :/</p>
+<p>go test -v test/authentigo_test.go</p>
 <h2>
 <a id="deployment" class="anchor" href="#deployment" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deployment</h2>
 <p>You can deploy the application in two methods:</p>
@@ -221,25 +243,28 @@ NOTE:</p>
 ssh user@machine.preprodiction.log <span class="pl-c"><span class="pl-c">#</span> Log in into the machine</span>
 <span class="pl-c1">cd</span> /home/no_sudo_user/AuthentiGo</pre></div>
 <p>Now that you have a fresh version of the code and you are in the directory of the sources file</p>
-<div class="highlight highlight-source-shell"><pre>exe=<span class="pl-s"><span class="pl-pds">"</span>authentigo<span class="pl-pds">"</span></span> <span class="pl-c"><span class="pl-c">#</span> Name of the executable generated</span>
-code=<span class="pl-s"><span class="pl-pds">"</span>authentigo.go<span class="pl-pds">"</span></span> <span class="pl-c"><span class="pl-c">#</span> Name of the main source code</span>
+<pre><code>```bash
+exe="authentigo" # Name of the executable generated
+code="authentigo.go" # Name of the main source code
 
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Killing the process ...<span class="pl-pds">"</span></span>
-pkill <span class="pl-smi">$exe</span> <span class="pl-c"><span class="pl-c">#</span> Killing all process that are named like $exe value</span>
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Deleting old code ...<span class="pl-pds">"</span></span>
-truncate -s0 <span class="pl-smi">$code</span> <span class="pl-c"><span class="pl-c">#</span> Empty the file containing the old code</span>
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Copy your code<span class="pl-pds">"</span></span>
-vi <span class="pl-smi">$code</span> <span class="pl-c"><span class="pl-c">#</span> Paste the code here</span>
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Cleaning old compilation files ...<span class="pl-pds">"</span></span>
-go clean <span class="pl-c"><span class="pl-c">#</span> Remove build executable</span>
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Copy the new utilies sources files ...<span class="pl-pds">"</span></span>
-cp -r <span class="pl-smi">$code</span> auth/ <span class="pl-smi">$GOPATH</span>/src/authentigo <span class="pl-c"><span class="pl-c">#</span> Copy the code into the $GOPATH</span>
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Building new executables ... <span class="pl-pds">"</span></span>
-go build <span class="pl-smi">$code</span>
-<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Stripping debug symbols<span class="pl-pds">"</span></span>
-strip -s <span class="pl-smi">$exe</span>
-mkdir logs <span class="pl-c"><span class="pl-c">#</span> create a folder for the logs</span>
-nohup ./<span class="pl-smi">$exe</span> -path utils -port 8080 <span class="pl-k">&gt;</span> logs/logs.txt <span class="pl-k">&amp;</span> <span class="pl-c"><span class="pl-c">#</span> Just run in background</span></pre></div>
+echo "Killing the process ..."
+pkill $exe # Killing all process that are named like $exe value
+echo "Deleting old code ..."
+truncate -s0 $code # Empty the file containing the old code
+echo "Copy your code"
+vi $code # Paste the code here
+echo "Cleaning old compilation files ..."
+go clean # Remove build executable
+echo "Copy the new utilies sources files ..."
+cp -r $code auth/ $GOPATH/src/authentigo # Copy the code into the $GOPATH
+echo "Building new executables ... "
+go build $code
+echo "Stripping debug symbols"
+strip -s $exe
+mkdir logs # create a folder for the logs
+nohup ./$exe -path utils -port 8080 &gt; logs/logs.txt &amp; # Just run in background
+```
+</code></pre>
 <h2>
 <a id="built-with" class="anchor" href="#built-with" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Built With</h2>
 <ul>
