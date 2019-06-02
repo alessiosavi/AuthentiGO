@@ -6,6 +6,7 @@ import (
 	"github.com/go-redis/redis"
 	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
 	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
+	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
 	"regexp"
 	"strings"
 	"time"
@@ -15,47 +16,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Person structure of a customer for save it into the DB during registration phase.
-type Person struct {
-	ID        bson.ObjectId `bson:"_id,omitempty" json:"_id,omitempty"`
-	Username  string        `bson:"Username,omitempty" json:"Username,omitempty"`
-	Password  string        `bson:"Password,omitempty" json:"Password,omitempty"`
-	Name      string        `bson:"Name,omitempty" json:"Name,omitempty"`
-	Surname   string        `bson:"Surname,omitempty"`
-	Birthday  time.Time     `bson:"Birthday,omitempty"` // time.Date(2014, time.November, 5, 0, 0, 0, 0, time.UTC)
-	Cellphone string        `bson:"Cellphone,omitempty"`
-	Phone     string        `bson:"Phone,omitempty"`
-	Addresses []Info        `bson:"Addresses,omitempty"`
-	Mail      string        `bson:"Mail,omitempty" json:"Mail,omitempty"`
-	WorkMail  string        `bson:"WorkMail,omitempty"`
-}
-
-// Info Used for track user skill/experience/role
-type Info struct {
-	Type   string   `bson:"Type,omitempty"`   // IT Specialist
-	Skills []string `bson:"Skills,omitempty"` // Java, Spring, Golang
-	Years  int      `bson:"Years,omitempty"`
-	City   City     `bson:"City,omitempty"`
-}
-
-// City save the location status of the customer
-type City struct {
-	Name    string `bson:"Name,omitempty"` // Bergamo
-	Town    string `bson:"Town,omitempty"` // Verdello
-	ZipCode int    `bson:"ZipCode,omitempty"`
-}
-
 // LoginUserCoreHTTP is delegated to manage the "core process" of authentication. It use the username in input for retrieve the customer
 // data from MongoDB. If the data is found, then the password in input will be compared with the one retrieved from the database
-func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session) string {
+func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session, db, coll string) string {
 	log.Debug("LoginUserHTTP | Verify if user [", username, "] is registered ...")
 	if mongoClient == nil { // 10 seconds wait
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
 	log.Info("LoginUserHTTP | Getting value from DB ...")
-	var User Person                                                                                     // Allocate a Person for store the DB result of next instruction
-	err := mongoClient.DB("GoLog-Customer").C("Customer").Find(bson.M{"Username": username}).One(&User) // Searching the user and assign the result (&) to User
+	var User datastructures.Person                                                  // Allocate a Person for store the DB result of next instruction
+	err := mongoClient.DB(db).C(coll).Find(bson.M{"Username": username}).One(&User) // Searching the user and assign the result (&) to User
 	log.Warn("LoginUserHTTP | Dumping result from DB: ", User, " | ERROR: ", err)
 	if err == nil { // User found... Let's now compare the password ..
 		log.Debug("LoginUserHTTP | Comparing password ...")
@@ -72,7 +43,7 @@ func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session) stri
 
 // InsertTokenIntoRedis is delegated to store the token of the customer into Redis. After that a customer have logged in, the token
 // assigned as a cookie is stored into Redis (used as a Cache), in order to validate every request without query MongoDB.
-func InsertTokenIntoRedis(User Person, token string, redisClient *redis.Client) string {
+func InsertTokenIntoRedis(User datastructures.Person, token string, redisClient *redis.Client) string {
 	log.Info("LoginUserHTTP | Inserting token into Redis for user ", User)
 	//redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
 	if redisClient == nil {
@@ -89,15 +60,15 @@ func InsertTokenIntoRedis(User Person, token string, redisClient *redis.Client) 
 // RegisterUserCoreHTTP is delegated to register the credential of the user into the Redis database.
 // It estabilish the connection to MongoDB with a specialized function, then it create an user with the input data.
 // After that, it ask to a delegated function to insert the data into Redis.
-func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) string {
+func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session, db, coll string) string {
 	log.Debug("RegisterUserCoreHTTP | Registering [", username, ":", password, "]")
 	//mongoClient := basicmongo.InitMongoDBConnection(nil) // Enstabilish the connection to the default DB
 	if mongoClient == nil {
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
-	User := Person{Username: username, Password: password, Birthday: time.Now()}            // Create the user
-	return basicmongo.InsertData(User, mongoClient, "GoLog-Customer", "Customer", username) // Ask to a delegated function to insert the data
+	User := datastructures.Person{Username: username, Password: password, Birthday: time.Now()} // Create the user
+	return basicmongo.InsertData(User, mongoClient, db, coll, username)                         // Ask to a delegated function to insert the data
 }
 
 // VerifyCookieFromRedisCoreHTTP is delegated to verify if the cookie of the customer is present on the DB (aka is logged).
@@ -106,11 +77,11 @@ func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) s
 // the customer. If the token is found, the customer is authorized to continue.
 func VerifyCookieFromRedisCoreHTTP(user, token string, redisClient *redis.Client) string {
 	log.Debug("VerifyCookieFromRedisCoreHTTP | START | User: ", user, " | Token: ", token)
-	if UsernameValidation(user) { // Verify that the credentials respect the rules
-		if TokenValidation(token) { // Verify that the token respect the rules
+	if ValidateUsername(user) { // Verify that the credentials respect the rules
+		if ValidateToken(token) { // Verify that the token respect the rules
 			log.Debug("VerifyCookieFromRedisCoreHTTP | Credential validated, retrieving token value from Redis ...")
 			check, dbToken := basicredis.GetValueFromDB(redisClient, user)
-			log.Debug("VerifyCookieFromRedisCoreHTTP | Data retrieved!")
+			log.Trace("VerifyCookieFromRedisCoreHTTP | Data retrieved!")
 			if check {
 				if strings.Compare(dbToken, token) == 0 {
 					log.Info("VerifyCookieFromRedisCoreHTTP | Token MATCH!! User is logged! | ", user, " | ", token)
@@ -150,7 +121,7 @@ func ParseAuthCredentialFromHeaders(auth []byte) (string, string) {
 
 // ValidateCredentials is wrapper for the multiple method for validate the input parameters
 func ValidateCredentials(user string, pass string) bool {
-	if UsernameValidation(user) && PasswordValidation(pass) {
+	if ValidateUsername(user) && PasswordValidation(pass) {
 		return true
 	}
 	return false
@@ -158,7 +129,6 @@ func ValidateCredentials(user string, pass string) bool {
 
 // PasswordValidation execute few check on the password in input
 func PasswordValidation(password string) bool {
-	log.Debug("PasswordValidation | START")
 	if strings.Compare(password, "") == 0 {
 		log.Warn("PasswordValidation | Password is empty :/")
 		return false
@@ -176,37 +146,36 @@ func PasswordValidation(password string) bool {
 	return true
 }
 
-// UsernameValidation execute few check on the username in input
-func UsernameValidation(username string) bool {
-	log.Debug("UsernameValidation | START")
+// ValidateUsername execute few check on the username in input
+func ValidateUsername(username string) bool {
 	if strings.Compare(username, "") == 0 {
-		log.Warn("UsernameValidation | Username is empty :/")
+		log.Warn("ValidateUsername | Username is empty :/")
 		return false
 	}
 	if len(username) < 4 || len(username) > 32 {
-		log.Warn("UsernameValidation | Username len not valid")
+		log.Warn("ValidateUsername | Username len not valid")
 		return false
 	}
 	myReg := regexp.MustCompile("^[a-zA-Z0-9]{4,32}$") // The string have to contains ONLY (letter OR number)
 	if !myReg.MatchString(username) {                  // the input doesn't match the regexp
-		log.Warn("UsernameValidation | Username have strange character :/ [", username, "]")
+		log.Warn("ValidateUsername | Username have strange character :/ [", username, "]")
 		return false
 	}
-	log.Info("UsernameValidation | Username [", username, "] VALIDATED!")
+	log.Info("ValidateUsername | Username [", username, "] VALIDATED!")
 	return true
 }
 
-// TokenValidation execute few check on the token in input
-func TokenValidation(token string) bool {
-	log.Debug("Validating [", token, "] ...")
+// ValidateToken execute few check on the token in input
+func ValidateToken(token string) bool {
+	log.Debug("ValidateToken | Validating [", token, "] ...")
 	if strings.Compare(token, "") == 0 {
-		log.Warn("TokenValidation | Token is empty :/")
+		log.Warn("ValidateToken | Token is empty :/")
 		return false
 	}
-	if len(token) != 32 { // md5 32 char
-		log.Warn("TokenValidation | Token len != 32 :/")
+	if len(token) != 52 {
+		log.Warn("ValidateToken | Token len != 52 :/ [found ", len(token), "]")
 		return false
 	}
-	log.Info("TokenValidation | Token [", token, "] VALIDATED!")
+	log.Info("ValidateToken | Token [", token, "] VALIDATED!")
 	return true
 }

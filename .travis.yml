@@ -1,0 +1,37 @@
+language: go
+
+go:
+  - "1.12.4"
+
+os:
+  - linux
+  - osx
+
+sudo: false
+
+branches:
+  only:
+  - master
+
+services:
+  - mongodb
+  - redis-server
+
+script:
+  - go get -v -u github.com/valyala/fasthttp
+  - go get -v -u github.com/valyala/gozstd
+  - go get -v -u github.com/sirupsen/logrus
+  - go get -v -u github.com/onrik/logrus/filename
+  - go get -v -u github.com/go-redis/redis
+  - go get -v -u github.com/globalsign/mgo
+  - go get -v -u github.com/globalsign/mgo/bson
+  - go get -v -u github.com/alessiosavi/GoUtils
+  
+  - pwd
+  - ls
+  - redis-cli ping
+  - go build
+  - ./AuthentiGo 2&>1&> log.out &
+  - go test -v test/authentigo_test.go
+  - pkill AuthentiGo
+  - cat log.out
