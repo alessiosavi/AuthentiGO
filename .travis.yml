@@ -17,9 +17,6 @@ services:
   - mongodb
   - redis-server
 
-
-install: true
-
 script:
   - go get -v -u github.com/valyala/fasthttp
   - go get -v -u github.com/valyala/gozstd
@@ -32,10 +29,9 @@ script:
   
   - pwd
   - ls
-  - go build
   - redis-cli ping
-  - ./Authentigo > log.out &
-  - curl -L -k -s -v 'http://localhost:11001/auth/login?user=alessio12345&pass=test12345'
-  - curl -L -k -s -v 'http://localhost:11001/auth/register?user=alessio12354&pass=test12345'
-  - curl -L -k -s -v 'http://localhost:11001/auth/login?user=alessio12345&pass=test12345'
-  - cat nolog.out
+  - go build
+  - ./AuthentiGo 2&>1&> log.out
+  - go test -v test/authentigo_test.go
+  - pkill AuthentiGo
+  - cat log.out

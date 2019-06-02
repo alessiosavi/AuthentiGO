@@ -6,6 +6,7 @@ import (
 	"github.com/go-redis/redis"
 	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
 	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
+	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
 	"regexp"
 	"strings"
 	"time"
@@ -14,36 +15,6 @@ import (
 	"github.com/globalsign/mgo/bson"
 	log "github.com/sirupsen/logrus"
 )
-
-// Person structure of a customer for save it into the DB during registration phase.
-type Person struct {
-	ID        bson.ObjectId `bson:"_id,omitempty" json:"_id,omitempty"`
-	Username  string        `bson:"Username,omitempty" json:"Username,omitempty"`
-	Password  string        `bson:"Password,omitempty" json:"Password,omitempty"`
-	Name      string        `bson:"Name,omitempty" json:"Name,omitempty"`
-	Surname   string        `bson:"Surname,omitempty"`
-	Birthday  time.Time     `bson:"Birthday,omitempty"` // time.Date(2014, time.November, 5, 0, 0, 0, 0, time.UTC)
-	Cellphone string        `bson:"Cellphone,omitempty"`
-	Phone     string        `bson:"Phone,omitempty"`
-	Addresses []Info        `bson:"Addresses,omitempty"`
-	Mail      string        `bson:"Mail,omitempty" json:"Mail,omitempty"`
-	WorkMail  string        `bson:"WorkMail,omitempty"`
-}
-
-// Info Used for track user skill/experience/role
-type Info struct {
-	Type   string   `bson:"Type,omitempty"`   // IT Specialist
-	Skills []string `bson:"Skills,omitempty"` // Java, Spring, Golang
-	Years  int      `bson:"Years,omitempty"`
-	City   City     `bson:"City,omitempty"`
-}
-
-// City save the location status of the customer
-type City struct {
-	Name    string `bson:"Name,omitempty"` // Bergamo
-	Town    string `bson:"Town,omitempty"` // Verdello
-	ZipCode int    `bson:"ZipCode,omitempty"`
-}
 
 // LoginUserCoreHTTP is delegated to manage the "core process" of authentication. It use the username in input for retrieve the customer
 // data from MongoDB. If the data is found, then the password in input will be compared with the one retrieved from the database
@@ -54,7 +25,7 @@ func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session) stri
 		return "DB_UNAVAIBLE"
 	}
 	log.Info("LoginUserHTTP | Getting value from DB ...")
-	var User Person                                                                                     // Allocate a Person for store the DB result of next instruction
+	var User datastructures.Person                                                                      // Allocate a Person for store the DB result of next instruction
 	err := mongoClient.DB("GoLog-Customer").C("Customer").Find(bson.M{"Username": username}).One(&User) // Searching the user and assign the result (&) to User
 	log.Warn("LoginUserHTTP | Dumping result from DB: ", User, " | ERROR: ", err)
 	if err == nil { // User found... Let's now compare the password ..
@@ -72,7 +43,7 @@ func LoginUserCoreHTTP(username, password string, mongoClient *mgo.Session) stri
 
 // InsertTokenIntoRedis is delegated to store the token of the customer into Redis. After that a customer have logged in, the token
 // assigned as a cookie is stored into Redis (used as a Cache), in order to validate every request without query MongoDB.
-func InsertTokenIntoRedis(User Person, token string, redisClient *redis.Client) string {
+func InsertTokenIntoRedis(User datastructures.Person, token string, redisClient *redis.Client) string {
 	log.Info("LoginUserHTTP | Inserting token into Redis for user ", User)
 	//redisClient, err := basicredis.ConnectToDb("", "") // Connect to the default redis instance
 	if redisClient == nil {
@@ -96,8 +67,8 @@ func RegisterUserCoreHTTP(username, password string, mongoClient *mgo.Session) s
 		log.Error("RegisterUserCoreHTTP | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
-	User := Person{Username: username, Password: password, Birthday: time.Now()}            // Create the user
-	return basicmongo.InsertData(User, mongoClient, "GoLog-Customer", "Customer", username) // Ask to a delegated function to insert the data
+	User := datastructures.Person{Username: username, Password: password, Birthday: time.Now()} // Create the user
+	return basicmongo.InsertData(User, mongoClient, "GoLog-Customer", "Customer", username)     // Ask to a delegated function to insert the data
 }
 
 // VerifyCookieFromRedisCoreHTTP is delegated to verify if the cookie of the customer is present on the DB (aka is logged).
