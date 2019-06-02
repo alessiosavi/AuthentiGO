@@ -1,14 +1,27 @@
 {
     "Host": "127.0.0.1",
-    "Port": 8090,
-    "Version": "v0.1.1",
+    "Port": 11001,
+    "Version": "v0.1.3",
+    "SSL": {
+        "Path": "./conf/ssl/",
+        "Cert": "localhost.crt",
+        "Key": "localhost.key",
+        "Enabled": false
+    },
     "Mongo": {
         "Host": "127.0.0.1",
-        "Port": 27017
+        "Port": 27017,
+        "Users": {
+            "DB": "AuthentiGO_DB",
+            "Collection": "USERS_COLLECTION"
+        }
     },
     "Redis": {
         "Host": "127.0.0.1",
-        "Port": "6379"
+        "Port": "6379",
+        "Token": {
+            "DB": 1
+        }
     },
     "Log": {
         "Level": "debug",

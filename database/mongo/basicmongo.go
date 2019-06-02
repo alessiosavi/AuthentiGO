@@ -1,6 +1,7 @@
 package basicmongo
 
 import (
+	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -8,23 +9,6 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
-
-// Database struct for DB
-type Database struct {
-	Name        string
-	Collections []Collection
-}
-
-// Collection struct for DB
-type Collection struct {
-	Name     string
-	Document []interface{}
-}
-
-// ServerData struct for manage DB
-type ServerData struct {
-	DatabaseList []Database
-}
 
 // InitMongoDBConnection return a session to the Mongo instances configured in input.
 // If input is null connect to the default instances
@@ -84,17 +68,17 @@ func RemoveUser(session *mgo.Session, database, collection, username string) err
 // InitServerData is used for retrieve the list of DBs name from the mongo instance in input.
 // It fetch the list of DBs from the Mongo instance.
 // Return a pointer to a structure for store and manipulate the data
-func InitServerData(session *mgo.Session) *ServerData {
+func InitServerData(session *mgo.Session) *datastructures.ServerData {
 	var dbList []string
-	var dataServer ServerData
+	var dataServer datastructures.ServerData
 	dbList, err := session.DatabaseNames() // Retrieving the list of DB
 	if err != nil {
 		log.Error("Error! During retrieving of DB Names :/", session)
 		return nil
 	}
 	log.Info("List of DB: ", dbList)
-	dataServer = ServerData{DatabaseList: make([]Database, len(dbList))} // Init the structure for receive the data
-	for i := 0; i < len(dbList); i++ {                                   // Iterate the list of DB names
+	dataServer = datastructures.ServerData{DatabaseList: make([]datastructures.Database, len(dbList))} // Init the structure for receive the data
+	for i := 0; i < len(dbList); i++ {                                                                 // Iterate the list of DB names
 		dataServer.DatabaseList[i].Name = dbList[i] // Save the name of DBs in mongo into the structure
 	}
 	log.Info("DB Saved! ", dataServer, "\n")
@@ -103,7 +87,7 @@ func InitServerData(session *mgo.Session) *ServerData {
 
 // PopulateCollectionList populate the list of Collections from the database list name in input.
 // Populate the structure in input, just for test purpouse
-func PopulateCollectionList(session *mgo.Session, dataServer *ServerData) error {
+func PopulateCollectionList(session *mgo.Session, dataServer *datastructures.ServerData) error {
 	for i := 0; i < len(dataServer.DatabaseList); i++ { // Save the name of collection into the relative structure
 		log.Info("Retrieving collections from -> " + dataServer.DatabaseList[i].Name)
 		collectionsNames, err := session.DB(dataServer.DatabaseList[i].Name).CollectionNames() // Get the list of collections
@@ -112,7 +96,7 @@ func PopulateCollectionList(session *mgo.Session, dataServer *ServerData) error 
 			return err
 		}
 		log.Warn("Retrieved ", collectionsNames, " | ", dataServer.DatabaseList[i])
-		dataServer.DatabaseList[i].Collections = make([]Collection, len(collectionsNames))
+		dataServer.DatabaseList[i].Collections = make([]datastructures.Collection, len(collectionsNames))
 		for j := 0; j < len(collectionsNames); j++ { // Iterating the collections name
 			dataServer.DatabaseList[i].Collections[j].Name = collectionsNames[j]
 			log.Info("Collection Name -> ", session.DB(dataServer.DatabaseList[i].Name).C(dataServer.DatabaseList[i].Collections[j].Name).Find(bson.M{}))
@@ -133,10 +117,10 @@ func PopulateCollectionList(session *mgo.Session, dataServer *ServerData) error 
 
 // GetCollectionsData is used for retrieve the list of Collections from the DB in input.
 // It return a list of collection containing all the data [Used for test purpouse]
-func GetCollectionsData(session *mgo.Session, database string) []Collection {
-	var collectionsNames []string //List of collection related to the DB iterated
-	var err error                 // General exception
-	var collections []Collection  // List of collection to return
+func GetCollectionsData(session *mgo.Session, database string) []datastructures.Collection {
+	var collectionsNames []string               //List of collection related to the DB iterated
+	var err error                               // General exception
+	var collections []datastructures.Collection // List of collection to return
 
 	log.Info("Retrieving collection from -> ", database)
 	collectionsNames, err = session.DB(database).CollectionNames() // Get the list of collections related to the DB
@@ -145,14 +129,14 @@ func GetCollectionsData(session *mgo.Session, database string) []Collection {
 		return nil
 	}
 	log.Warn("Retrieved ", collectionsNames, " | ", database)
-	collections = make([]Collection, len(collectionsNames))
+	collections = make([]datastructures.Collection, len(collectionsNames))
 
 	for j := 0; j < len(collectionsNames); j++ { // Iterating the collections name
 		collections[j].Name = collectionsNames[j]
 		log.Info("Collection Name -> ", collections[j].Name)             // Retrieve everything
 		if strings.Compare(collections[j].Name, "system.profile") == 0 { // Removing MongoDB profiling collections
 			log.Error("Removing ", collections[j].Name, " ...")
-			RemoveCollectionFromDB(session, database, collections[j].Name)
+			//RemoveCollectionFromDB(session, database, collections[j].Name)
 		} else if strings.Contains(collections[j].Name, "icket") || strings.Contains(collections[j].Name, "ava") { // Ignore big ticket DB
 			log.Error("Skipping ", collections[j].Name, " ...")
 		} else {
