@@ -108,6 +108,8 @@ func TestRegister(t *testing.T) {
 		if !verifyLoginResponse(response[i]) {
 			t.Log("Error on response ", i, " | Resp: ", response[i])
 			t.Fail()
+		} else {
+			t.Log("Success on response ", i, " | Resp: ", response[i])
 		}
 	}
 }
@@ -125,6 +127,8 @@ func TestLogin(t *testing.T) {
 		if !verifyLoginResponse(response[i]) {
 			t.Log("Error on response ", i, " | Resp: ", response[i])
 			t.Fail()
+		} else {
+			t.Log("Success on response ", i, " | Resp: ", response[i])
 		}
 	}
 }
