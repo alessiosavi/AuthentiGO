@@ -17,12 +17,19 @@ type Configuration struct {
 		Enabled bool
 	}
 	Mongo struct {
-		Host string
-		Port int
+		Host  string
+		Port  int
+		Users struct {
+			DB         string
+			Collection string
+		}
 	}
 	Redis struct {
-		Host string
-		Port string
+		Host  string
+		Port  string
+		Token struct {
+			DB int
+		}
 	}
 	Log struct {
 		Level string

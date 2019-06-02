@@ -1,11 +1,15 @@
 
 # AuthentiGo
 
-[![Build Status](https://travis.ibm.com/Alessio-Savi/GoLogAnalyzer.svg?token=wWmbVrxsSXYSyYLLhamH&branch=master)](https://travis.ibm.com/Alessio-Savi/GoLogAnalyzer)
+[![Build Status](https://travis.ibm.com/Alessio-Savi/AuthentiGo.svg?token=wWmbVrxsSXYSyYLLhamH&branch=master)](https://github.ibm.com/Alessio-Savi/AuthentiGo)
 
 Simple Golang tool that work as a "plug-and-play" executable for authenticate your webapplication
 
 ## Getting Started
+
+### Documentation
+
+[![Online documentation](https://pages.github.ibm.com/Alessio-Savi/AuthentiGo/)]
 
 During the development of every internal tools, 90% of the time it's request to create an "__*authentication layer*__" in order to restrict the access to the services only to the person admitted.
 
@@ -100,8 +104,7 @@ In order to install golang in your machine, you have to run the following comman
   - Run this "installer" script only once
 
 ```bash
-
-golang_version="1.11.4"
+golang_version="1.12.4"
 golang_link="https://dl.google.com/go/go$golang_version.linux-amd64.tar.gz"
 root_foolder="/opt/GOLANG" # Set the tree variable needed for build the enviroinment
 go_source="$root_foolder/go"
@@ -133,17 +136,17 @@ In order to install MongoDB (and some related usefull utils), you have to run th
 
 __*The following operations have to be done as root*__
 
-```bash
-mkdir /opt/MongoDB
-cd $_
-wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-4.0.5-1.el7.x86_64.rpm
-wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-4.0.5-1.el7.x86_64.rpm
-wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-4.0.5-1.el7.x86_64.rpm
+    ```bash
+    mkdir /opt/MongoDB
+    cd $_
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-4.0.5-1.el7.x86_64.rpm
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-4.0.5-1.el7.x86_64.rpm
+    wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-4.0.5-1.el7.x86_64.rpm
 
-for i in $(ls); do echo "|Installing ==== $i ====|"; rpm -ivh $i ; done
+    for i in $(ls); do echo "|Installing ==== $i ====|"; rpm -ivh $i ; done
 
-sudo service mongod start
-```
+    sudo service mongod start
+    ```
 
 ### 3) Install Redis
 
@@ -151,25 +154,25 @@ In order to compile Redis from source, you have to run the following commands:
 
 __*The following operations have to be done as root*__
 
-```bash
-mkdir /opt/Redis
-cd $_
-wget http://download.redis.io/releases/redis-5.0.3.tar.gz
-tar xf redis-5.0.3.tar.gz
-cd redis-5.0.3.tar.gz
-make
-make install
-```
+    ```bash
+    mkdir /opt/Redis
+    cd $_
+    wget http://download.redis.io/releases/redis-5.0.3.tar.gz
+    tar xf redis-5.0.3.tar.gz
+    cd redis-5.0.3.tar.gz
+    make
+    make install
+    ```
 
 __*AUTOMATED CONFIGURATION*__:
 
 Redis came with an usefull script for automatize the install the server.
 If you want to use the default configuration provided, use the following command:
 
-```bash
-cd utils
-bash install_server.sh
-```
+    ```bash
+    cd utils
+    bash install_server.sh
+    ```
 
 Now you have to press enter for confirm the default configuration location.
 
@@ -184,30 +187,29 @@ __*NOTE*__:
 The dependendencies used by the tool can be downloaded as following:
 NOTE:
 
-```bash
-  go get -v -u github.com/valyala/fasthttp
-  go get -v -u github.com/sirupsen/logrus
-  go get -v -u github.com/onrik/logrus/filename
-  go get -v -u github.com/go-redis/redis
-  go get -v -u github.com/globalsign/mgo
-  
+    ```bash
+    go get -v -u github.com/valyala/fasthttp
+    go get -v -u github.com/valyala/gozstd
+    go get -v -u github.com/sirupsen/logrus
+    go get -v -u github.com/onrik/logrus/filename
+    go get -v -u github.com/go-redis/redis
+    go get -v -u github.com/globalsign/mgo
+    go get -v -u github.com/globalsign/mgo/bson
+    go get -v -u github.com/alessiosavi/GoUtils # Download the code
+    ```
 
-  go get -v -u github.ibm.com/Alessio-Savi/AuthentiGo # Download the code
-```
+Than you have to download it manually
 
-In case of problem, you have to download it manually
-
-```bash
-  cd $GOPATH/src
-  git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
-  git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
-  cd AuthentiGo
-  go build
-```
+    ```bash
+    cd $GOPATH/src
+    git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
+    cd AuthentiGo
+    go build
+    ```
 
 ## Running the tests
 
-Unfortunatly no test are provided with the initial versione of the software :/
+go test -v test/authentigo_test.go
 
 ## Deployment
 
@@ -226,27 +228,27 @@ cd /home/no_sudo_user/AuthentiGo
 
 Now that you have a fresh version of the code and you are in the directory of the sources file
 
-```bash
-exe="authentigo" # Name of the executable generated
-code="authentigo.go" # Name of the main source code
+    ```bash
+    exe="authentigo" # Name of the executable generated
+    code="authentigo.go" # Name of the main source code
 
-echo "Killing the process ..."
-pkill $exe # Killing all process that are named like $exe value
-echo "Deleting old code ..."
-truncate -s0 $code # Empty the file containing the old code
-echo "Copy your code"
-vi $code # Paste the code here
-echo "Cleaning old compilation files ..."
-go clean # Remove build executable
-echo "Copy the new utilies sources files ..."
-cp -r $code auth/ $GOPATH/src/authentigo # Copy the code into the $GOPATH
-echo "Building new executables ... "
-go build $code
-echo "Stripping debug symbols"
-strip -s $exe
-mkdir logs # create a folder for the logs
-nohup ./$exe -path utils -port 8080 > logs/logs.txt & # Just run in background
-```
+    echo "Killing the process ..."
+    pkill $exe # Killing all process that are named like $exe value
+    echo "Deleting old code ..."
+    truncate -s0 $code # Empty the file containing the old code
+    echo "Copy your code"
+    vi $code # Paste the code here
+    echo "Cleaning old compilation files ..."
+    go clean # Remove build executable
+    echo "Copy the new utilies sources files ..."
+    cp -r $code auth/ $GOPATH/src/authentigo # Copy the code into the $GOPATH
+    echo "Building new executables ... "
+    go build $code
+    echo "Stripping debug symbols"
+    strip -s $exe
+    mkdir logs # create a folder for the logs
+    nohup ./$exe -path utils -port 8080 > logs/logs.txt & # Just run in background
+    ```
 
 ## Built With
 

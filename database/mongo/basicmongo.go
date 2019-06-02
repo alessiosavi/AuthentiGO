@@ -136,7 +136,7 @@ func GetCollectionsData(session *mgo.Session, database string) []datastructures.
 		log.Info("Collection Name -> ", collections[j].Name)             // Retrieve everything
 		if strings.Compare(collections[j].Name, "system.profile") == 0 { // Removing MongoDB profiling collections
 			log.Error("Removing ", collections[j].Name, " ...")
-			RemoveCollectionFromDB(session, database, collections[j].Name)
+			//RemoveCollectionFromDB(session, database, collections[j].Name)
 		} else if strings.Contains(collections[j].Name, "icket") || strings.Contains(collections[j].Name, "ava") { // Ignore big ticket DB
 			log.Error("Skipping ", collections[j].Name, " ...")
 		} else {
