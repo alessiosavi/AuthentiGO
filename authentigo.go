@@ -47,7 +47,7 @@ func main() {
 	defer mongoClient.Close()
 
 	// ==== CONNECT TO REDIS ====
-	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port)
+	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Token.DB)
 	defer redisClient.Close()
 
 	log.Info("main | Spawing API services")
@@ -64,7 +64,7 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 			httputils.SecureRequest(ctx, false)
 		}
 
-		ctx.Response.Header.Set("AuthentiGo", "$v0.1.2")
+		ctx.Response.Header.Set("AuthentiGo", "$v0.1.3")
 		log.Info("REQUEST --> ", ctx, " | Headers: ", ctx.Request.Header.String(), " | Body: ", ctx.PostBody())
 		switch string(ctx.Path()) {
 		case "/middleware":
@@ -73,10 +73,10 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 			fastBenchmarkHTTP(ctx) // Benchmark API
 		case "/auth/login":
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
-			AuthLoginWrapper(ctx, mgoClient, redisClient) // Login functionality [Test purpouse]
+			AuthLoginWrapper(ctx, mgoClient, redisClient, cfg) // Login functionality [Test purpouse]
 		case "/auth/register":
 			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
-			AuthRegisterWrapper(ctx, mgoClient) // Register an user into the DB [Test purpouse]
+			AuthRegisterWrapper(ctx, mgoClient, cfg) // Register an user into the DB [Test purpouse]
 		case "/auth/verify":
 			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if an user is authorized to use the service
 		case "/test/crypt":
@@ -112,14 +112,14 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 // BasichAuth headers: example ->from browser username:password@$URL/auth/login| curl -vL --user "username:password $URL/auth/login"
 // GET Request: example -> from browser $URL/auth/login?user=username&pass=password | curl -vL $URL/auth/login?user=username&pass=password
 // POST Request: example -> curl -vL $URL/auth/login -d 'user=username&pass=password'
-func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisClient *redis.Client) {
+func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisClient *redis.Client, cfg datastructures.Configuration) {
 	log.Info("AuthLoginWrapper | Starting authentication | Parsing authentication credentials")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request from BasicAuth headers, GET & POST
 	if authutils.ValidateCredentials(username, password) { // Verify if the input parameter respect the rules ...
 		log.Debug("AuthLoginWrapper | Input validated | User: ", username, " | Pass: ", password, " | Calling core functionalities ...")
-		check := authutils.LoginUserCoreHTTP(username, password, mgoClient) // Login phase
-		if strings.Compare(check, "OK") == 0 {                              // Login Succeed
+		check := authutils.LoginUserCoreHTTP(username, password, mgoClient, cfg.Mongo.Users.DB, cfg.Mongo.Users.Collection) // Login phase
+		if strings.Compare(check, "OK") == 0 {                                                                              // Login Succeed
 			log.Debug("AuthLoginWrapper | Login succesfully! Generating token!")
 			token := basiccrypt.GenerateToken(username, password) // Generate a simple md5 hashed token
 			log.Info("AuthLoginWrapper | Inserting token into Redis ", token)
@@ -154,14 +154,14 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisCli
 
 //AuthRegisterWrapper is the authentication wrapper for register the client into the service.
 //It have to parse the credentials of the customers and register the username and the password into the DB.
-func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
+func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, cfg datastructures.Configuration) {
 	log.Debug("AuthRegisterWrapper | Starting register functionalities! | Parsing username and password ...")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request
 	if authutils.ValidateCredentials(username, password) {
 		log.Debug("AuthRegisterWrapper | Input validated | User: ", username, " | Pass: ", password, " | Calling core functionalities ...")
-		check := authutils.RegisterUserCoreHTTP(username, password, mgoClient) // Registration phase, connect to MongoDB
-		if strings.Compare(check, "OK") == 0 {                                 // Registration Succeed
+		check := authutils.RegisterUserCoreHTTP(username, password, mgoClient, cfg.Mongo.Users.DB, cfg.Mongo.Users.Collection) // Registration phase, connect to MongoDB
+		if strings.Compare(check, "OK") == 0 {                                                                                 // Registration Succeed
 			log.Warn("AuthRegisterWrapper | Registering new client! | ", username, ":", password)
 			json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
 		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input don't match with rules

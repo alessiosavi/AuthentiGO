@@ -8,7 +8,7 @@ import (
 )
 
 // ConnectToDb use emtpy string for hardcoded port
-func ConnectToDb(addr string, port string) *redis.Client {
+func ConnectToDb(addr string, port string, db int) *redis.Client {
 	if strings.Compare(addr, port) == 0 {
 		addr = "localhost"
 		port = "6379"
@@ -16,7 +16,7 @@ func ConnectToDb(addr string, port string) *redis.Client {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr + ":" + port,
 		Password: "", // no password set
-		DB:       0,  // use default DB
+		DB:       db,
 	})
 	log.Info("Connecting to -> ", client)
 	err := client.Ping().Err()
