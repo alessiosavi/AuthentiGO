@@ -5,6 +5,7 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/go-redis/redis"
 	"github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
+	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
 	"github.ibm.com/Alessio-Savi/AuthentiGo/utils"
 	"os"
 
@@ -26,48 +27,6 @@ import (
 	log "github.com/sirupsen/logrus" // Pretty log library, not the fastest (zerolog/zap)
 	"github.com/valyala/fasthttp"
 )
-
-// configuration is the structure for handle the configuration data
-type Configuration struct {
-	Host    string // Hostname to bind the service
-	Port    int    // Port to bind the service
-	Version string
-	SSL     struct {
-		Path    string
-		Cert    string
-		Key     string
-		Enabled bool
-	}
-	Mongo struct {
-		Host string
-		Port int
-	}
-	Redis struct {
-		Host string
-		Port string
-	}
-	Log struct {
-		Level string
-		Path  string
-		Name  string
-	}
-}
-
-// status Structure used for populate the json response for the RESTfull HTTP API
-type status struct {
-	Status      bool        `json:"Status"`      // Status of response [true,false] OK, KO
-	ErrorCode   string      `json:"ErrorCode"`   // Code linked to the error (KO)
-	Description string      `json:"Description"` // Description linked to the error (KO)
-	Data        interface{} `json:"Data"`        // Generic data to return in the response
-}
-
-// middlewareRequest Structure used for manage the request among the user and the external service
-type middlewareRequest struct {
-	Username string `json:"user"`   // Username of the customer that require the service
-	Token    string `json:"token"`  // Token related to the user for consume the service
-	Method   string `json:"method"` // Is the external service that you want to call
-	Data     string `json:"data"`   // Is the arguments that you want to encode in your request
-}
 
 func main() {
 
@@ -97,7 +56,7 @@ func main() {
 
 // handleRequests Is delegated to map (BIND) the API methods to the HTTP URL
 // It use a gzip handler that is usefull for reduce bandwitch usage while interacting with the middleware function
-func handleRequests(cfg Configuration, mgoClient *mgo.Session, redisClient *redis.Client) {
+func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, redisClient *redis.Client) {
 	m := func(ctx *fasthttp.RequestCtx) {
 		if cfg.SSL.Enabled {
 			httputils.SecureRequest(ctx, true)
@@ -170,26 +129,26 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisCli
 			ctx.Response.Header.SetCookie(authcookie)     // Set the token into the cookie headers
 			ctx.Response.Header.Set("GoLog-Token", token) // Set the token into a custom headers for future security improvments
 			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
-			json.NewEncoder(ctx).Encode(status{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
 		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input does not match with rules
 			log.Error("AuthLoginWrapper | Input does not respect the rules :/! | ", username, ":", password)
 			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
 		} else if strings.Compare(check, "USR") == 0 { //User does not exist in DB
 			log.Error("AuthLoginWrapper | Client does not exists! | ", username, ":", password)
 			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "User does not exists!", ErrorCode: "USER_NOT_REGISTERED", Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User does not exists!", ErrorCode: "USER_NOT_REGISTERED", Data: nil})
 		} else if strings.Compare(check, "PSW") == 0 { //Password mismatch
 			log.Error("AuthLoginWrapper | Password does not match! | ", username, ":", password)
 			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "Password don't match!", ErrorCode: username, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Password don't match!", ErrorCode: username, Data: nil})
 		} else { // General error cause
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "Unable to connect to MongoDB", ErrorCode: check, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Unable to connect to MongoDB", ErrorCode: check, Data: nil})
 		}
 	} else { // error parsing credential
 		log.Info("AuthLoginWrapper | Error parsing credential!! |", username+":"+password)
 		ctx.Response.Header.DelCookie("GoLog-Token")
-		json.NewEncoder(ctx).Encode(status{Status: false, Description: "Error parsing credential", ErrorCode: "Missing or manipulated input", Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Missing or manipulated input", Data: nil})
 	}
 }
 
@@ -204,21 +163,21 @@ func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session) {
 		check := authutils.RegisterUserCoreHTTP(username, password, mgoClient) // Registration phase, connect to MongoDB
 		if strings.Compare(check, "OK") == 0 {                                 // Registration Succeed
 			log.Warn("AuthRegisterWrapper | Registering new client! | ", username, ":", password)
-			json.NewEncoder(ctx).Encode(status{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
 		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input don't match with rules
 			log.Error("AuthRegisterWrapper | Input does not respect the rules :/! | ", username, ":", password)
 			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
 		} else if strings.Compare(check, "ALREDY_EXIST") == 0 { //User alredy present in DB
 			log.Error("AuthRegisterWrapper | User alredy exists! | ", username, ":", password)
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "User alredy exists!", ErrorCode: username, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User alredy exists!", ErrorCode: username, Data: nil})
 		} else { // General error cause
-			json.NewEncoder(ctx).Encode(status{Status: false, Description: "Unable to connect to DB", ErrorCode: check, Data: nil})
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Unable to connect to DB", ErrorCode: check, Data: nil})
 		}
 
 	} else { // error parsing credential
 		log.Info("AuthRegisterWrapper | Error parsing credential!! | ", username, ":", password)
-		json.NewEncoder(ctx).Encode(status{Status: false, Description: "Error parsing credential", ErrorCode: "Wrong input or fatal error", Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Wrong input or fatal error", Data: nil})
 	}
 }
 
@@ -252,9 +211,9 @@ func VerifyCookieFromRedisHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Clie
 	log.Debug("VerifyCookieFromRedisHTTP | Retrieving cookie from redis ...")
 	auth := authutils.VerifyCookieFromRedisCoreHTTP(user, token, redisClient) // Call the core function for recognize if the user have the token
 	if strings.Compare(auth, "AUTHORIZED") == 0 {
-		json.NewEncoder(ctx).Encode(status{Status: true, Description: "Logged in!", ErrorCode: auth, Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "Logged in!", ErrorCode: auth, Data: nil})
 	} else {
-		json.NewEncoder(ctx).Encode(status{Status: false, Description: "Not logged in!", ErrorCode: auth, Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Not logged in!", ErrorCode: auth, Data: nil})
 	}
 }
 
@@ -323,7 +282,7 @@ func fastBenchmarkHTTP(ctx *fasthttp.RequestCtx) {
 func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	log.Info("CTX: ", string(ctx.PostBody())) // Logging the arguments of the request
-	var req middlewareRequest
+	var req datastructures.MiddlewareRequest
 	json.Unmarshal(ctx.PostBody(), &req) // Populate the structure from the json
 	log.Info("Req: ", req)
 	log.Debug("Validating request ...")
@@ -336,14 +295,14 @@ func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 			ctx.Write(sendGet(req))
 			return
 		}
-		json.NewEncoder(ctx).Encode(status{Status: false, Description: "NOT AUTHORIZED!!", ErrorCode: "YOU_SHALL_NOT_PASS", Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "NOT AUTHORIZED!!", ErrorCode: "YOU_SHALL_NOT_PASS", Data: nil})
 		return
 	}
-	json.NewEncoder(ctx).Encode(status{Status: false, Description: "Not Valid Json!", ErrorCode: "", Data: req})
+	json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Not Valid Json!", ErrorCode: "", Data: req})
 }
 
 // validateMiddlewareRequest is developed in order to verify it the request from the customer is valid. Can be view as a "filter"
-func validateMiddlewareRequest(request middlewareRequest) bool {
+func validateMiddlewareRequest(request datastructures.MiddlewareRequest) bool {
 	if authutils.ValidateUsername(request.Username) { // Validate the username
 		if authutils.ValidateToken(request.Token) { // Validate the token
 			if strings.Compare(request.Method, "") != 0 { // Verify if the request is not empty
@@ -394,7 +353,7 @@ func DecryptDataHTTPWrapper(ctx *fasthttp.RequestCtx) {
 }
 
 // sendGet is developed in order to forward the input request to the service and return the response
-func sendGet(request middlewareRequest) []byte {
+func sendGet(request datastructures.MiddlewareRequest) []byte {
 	//url := "https://ground0.hackx.com/log-analyzer-prod/auth/" + method + "?" + data
 	url := "https://ground0.hackx.com/log-analyzer-prod/" + request.Method + "?" + request.Data
 	log.Info("URL:>", url)
@@ -423,7 +382,7 @@ func sendGet(request middlewareRequest) []byte {
 }
 
 // VerifyCommandLineInput is delegated to manage the inputer parameter provide with the input flag from command line
-func verifyCommandLineInput() Configuration {
+func verifyCommandLineInput() datastructures.Configuration {
 	log.Debug("verifyCommandLineInput | Init a new configuration from the conf file")
 	c := flag.String("config", "./conf/test.json", "Specify the configuration file.")
 	flag.Parse()
@@ -436,7 +395,7 @@ func verifyCommandLineInput() Configuration {
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
-	cfg := Configuration{}
+	cfg := datastructures.Configuration{}
 	err = decoder.Decode(&cfg)
 	if err != nil {
 		log.Fatal("can't decode config JSON: ", err)
