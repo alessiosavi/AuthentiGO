@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	basiccrypt "github.ibm.com/Alessio-Savi/AuthentiGo/crypt"
+
 	"github.com/go-redis/redis"
 	"github.com/valyala/fasthttp"
 	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
@@ -34,7 +36,7 @@ func LoginUserHTTPCore(username, password string, mongoClient *mgo.Session, db, 
 	log.Warn("LoginUserHTTPCore | Dumping result from DB: ", User, " | ERROR: ", err)
 	if err == nil { // User found... Let's now compare the password ..
 		log.Debug("LoginUserHTTPCore | Comparing password ...")
-		if strings.Compare(User.Password, password) == 0 { // Comparing password of the user from DB with the one in input
+		if basiccrypt.VerifyPlainPasswords(password, User.Password, username+":"+password) { // Comparing password of the user from DB with the one in input
 			log.Warn("LoginUserHTTPCore | Client credential authorizated !!! | User: ", User)
 			return "OK"
 		}
@@ -73,12 +75,14 @@ func RegisterUserHTTPCore(username, password string, mongoClient *mgo.Session, d
 	log.Debug("RegisterUserHTTPCore | Verifying if connection is available ...")
 	err := mongoClient.Ping()
 	if err != nil {
-		log.Error("MongoPing: ", err)
+		log.Error("RegisterUserHTTPCore | MongoPing: ", err)
 		return err.Error()
 	}
 	log.Debug("RegisterUserHTTPCore | Connection enstabilished! Inserting data ...")
-	User := datastructures.Person{Username: username, Password: password, Birthday: time.Now()} // Create the user
-	return basicmongo.InsertData(User, mongoClient, db, coll, username)                         // Ask to a delegated function to insert the data
+	// Store the password encrypting with the 'username:password' as key :/
+	// TODO: Increase security
+	User := datastructures.Person{Username: username, Password: basiccrypt.Encrypt([]byte(password), username+":"+password), Birthday: time.Now()} // Create the user
+	return basicmongo.InsertData(User, mongoClient, db, coll, username)                                                                            // Ask to a delegated function to insert the data
 }
 
 // VerifyCookieFromRedisHTTPCore is delegated to verify if the cookie of the customer is present on the DB (aka is logged).

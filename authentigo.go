@@ -76,8 +76,13 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 		} else {
 			httputils.SecureRequest(ctx, false)
 		}
-		ctx.Response.Header.Set("AuthentiGo", "$v0.1.4")
-		log.Info("\n|REQUEST --> ", ctx, " \n|Headers: ", ctx.Request.Header.String(), "| Body: ", string(ctx.PostBody()))
+		ctx.Response.Header.Set("AuthentiGo", "$v0.1.5")
+
+		// Avoid to print stats req
+		if strings.Compare(string(ctx.Path()), "/stats") != 0 {
+			log.Info("\n|REQUEST --> ", ctx, " \n|Headers: ", ctx.Request.Header.String(), "| Body: ", string(ctx.PostBody()))
+		}
+
 		switch string(ctx.Path()) {
 		case "/middleware":
 			middleware(ctx, redisClient)
@@ -171,8 +176,6 @@ func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, cfg d
 		} else {
 			commonutils.AuthRegisterErrorHelper(ctx, check, username, password)
 		}
-		ctx.Response.
-
 	} else { // error parsing credential
 		log.Info("AuthRegisterWrapper | Error parsing credential!! | ", username, ":", password)
 		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Wrong input or fatal error", Data: nil})
