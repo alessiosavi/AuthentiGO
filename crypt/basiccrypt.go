@@ -8,6 +8,10 @@ import (
 	b64 "encoding/base64"
 	"encoding/hex"
 	"io"
+	"strings"
+
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Encrypt is delegated to crypt the data in input with the given password
@@ -60,4 +64,13 @@ func Decrypt(data string, passphrase string) string {
 // GenerateToken create a token for authenticate the request
 func GenerateToken(username string, password string) string {
 	return Encrypt([]byte(username+":"+password), password)
+}
+
+func VerifyTokens(token1, token2, password string) bool {
+	decrypted1 := Decrypt(token1, password)
+	log.Debug("VerifyTokens | First token decrypted [", token1, " -> ", decrypted1, "]")
+	decrypted2 := Decrypt(token2, password)
+	logrus.Debug("VerifyTokens | First token decrypted [", token2, " -> ", decrypted2, "]")
+	return strings.Compare(decrypted1, decrypted2) == 0
+	//return strings.Compare(Decrypt(token1, password), Decrypt(token2, password)) == 0
 }

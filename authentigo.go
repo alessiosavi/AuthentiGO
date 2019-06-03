@@ -38,6 +38,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	// Screaming fast HTTP server
 	fasthttp "github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/expvarhandler"
 )
 
 func main() {
@@ -96,6 +97,8 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 			CryptDataHTTPWrapper(ctx)
 		case "/test/decrypt":
 			DecryptDataHTTPWrapper(ctx)
+		case "/stats":
+			expvarhandler.ExpvarHandler(ctx)
 		default:
 			ctx.Response.SetStatusCode(404)
 			ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
@@ -143,20 +146,8 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisCli
 			ctx.Response.Header.Set("GoLog-Token", token) // Set the token into a custom headers for future security improvments
 			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
 			json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
-		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input does not match with rules
-			log.Error("AuthLoginWrapper | Input does not respect the rules :/! | ", username, ":", password)
-			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
-		} else if strings.Compare(check, "USR") == 0 { //User does not exist in DB
-			log.Error("AuthLoginWrapper | Client does not exists! | ", username, ":", password)
-			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User does not exists!", ErrorCode: "USER_NOT_REGISTERED", Data: nil})
-		} else if strings.Compare(check, "PSW") == 0 { //Password mismatch
-			log.Error("AuthLoginWrapper | Password does not match! | ", username, ":", password)
-			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Password don't match!", ErrorCode: username, Data: nil})
-		} else { // General error cause
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Unable to connect to MongoDB", ErrorCode: check, Data: nil})
+		} else {
+			commonutils.AuthLoginWrapperErrorHelper(ctx, check, username, password)
 		}
 	} else { // error parsing credential
 		log.Info("AuthLoginWrapper | Error parsing credential!! |", username+":"+password)
@@ -177,16 +168,10 @@ func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, cfg d
 		if strings.Compare(check, "OK") == 0 {                                                                                 // Registration Succeed
 			log.Warn("AuthRegisterWrapper | Customer insert with success! | ", username, ":", password)
 			json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
-		} else if strings.Compare(check, "NOT_VALID") == 0 { // Input don't match with rules
-			log.Error("AuthRegisterWrapper | Input does not respect the rules :/! | ", username, ":", password)
-			ctx.Response.Header.DelCookie("GoLog-Token")
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
-		} else if strings.Compare(check, "ALREDY_EXIST") == 0 { //User alredy present in DB
-			log.Error("AuthRegisterWrapper | User alredy exists! | ", username, ":", password)
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User alredy exists!", ErrorCode: username, Data: nil})
-		} else { // General error cause
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Unable to connect to DB", ErrorCode: check, Data: nil})
+		} else {
+			commonutils.AuthRegisterErrorHelper(ctx, check, username, password)
 		}
+		ctx.Response.
 
 	} else { // error parsing credential
 		log.Info("AuthRegisterWrapper | Error parsing credential!! | ", username, ":", password)
@@ -271,7 +256,7 @@ func fastBenchmarkHTTP(ctx *fasthttp.RequestCtx) {
 	ctx.Write([]byte("Retry !"))
 }
 
-//middleware is the function delegated to take in charge the request of the customer, be sure that is logged in, then call
+// middleware is the function delegated to take in charge the request of the customer, be sure that is logged in, then call
 // the external service that the user want to contat. If the customers is authorized (token proved in request match with the one retrieved)
 // from Redis), the query will be executed and the result will be showed back as a response.
 func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
