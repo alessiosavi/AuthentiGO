@@ -3,14 +3,15 @@ package authutils
 import (
 	"bytes"
 	"encoding/base64"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/go-redis/redis"
 	"github.com/valyala/fasthttp"
 	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
 	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
 	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
-	"regexp"
-	"strings"
-	"time"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -65,11 +66,17 @@ func InsertTokenIntoRedis(User datastructures.Person, token string, redisClient 
 // After that, it ask to a delegated function to insert the data into Redis.
 func RegisterUserHTTPCore(username, password string, mongoClient *mgo.Session, db, coll string) string {
 	log.Debug("RegisterUserHTTPCore | Registering [", username, ":", password, "]")
-	//mongoClient := basicmongo.InitMongoDBConnection(nil) // Enstabilish the connection to the default DB
 	if mongoClient == nil {
 		log.Error("RegisterUserHTTPCore | Impossible to connect to DB | ", mongoClient)
 		return "DB_UNAVAIBLE"
 	}
+	log.Debug("RegisterUserHTTPCore | Verifying if connection is available ...")
+	err := mongoClient.Ping()
+	if err != nil {
+		log.Error("MongoPing: ", err)
+		return err.Error()
+	}
+	log.Debug("RegisterUserHTTPCore | Connection enstabilished! Inserting data ...")
 	User := datastructures.Person{Username: username, Password: password, Birthday: time.Now()} // Create the user
 	return basicmongo.InsertData(User, mongoClient, db, coll, username)                         // Ask to a delegated function to insert the data
 }
@@ -104,7 +111,7 @@ func VerifyCookieFromRedisHTTPCore(user, token string, redisClient *redis.Client
 }
 
 func DeleteCustomerHTTPCore(user, password, token, db, coll string, redisClient *redis.Client, mgoClient *mgo.Session) string {
-	log.Debug("DeleteCustomerHTTPCore | Removing -> User: ", user, " | Psw: ", password, " | Token: ", token)
+	log.Info("DeleteCustomerHTTPCore | Removing -> User: ", user, " | Psw: ", password, " | Token: ", token)
 	log.Debug("DeleteCustomerHTTPCore | Validating username and password ...")
 	if ValidateCredentials(user, password) {
 		log.Debug("DeleteCustomerHTTPCore | Validating token ...")

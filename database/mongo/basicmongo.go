@@ -1,8 +1,9 @@
 package basicmongo
 
 import (
-	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
 	"strings"
+
+	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
 
 	log "github.com/sirupsen/logrus"
 
