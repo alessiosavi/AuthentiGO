@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <title>Authentigo by Alessio-Savi</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Authentigo</h1>
+        <h2>Plug and play authentication layer higly customizable written (why not?) in pure golang</h2>
+
+        <section id="downloads">
+          <a href="https://github.ibm.com/Alessio-Savi/AuthentiGo" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a id="authentigo" class="anchor" href="#authentigo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>AuthentiGo</h1>
+<p><a href="https://github.ibm.com/Alessio-Savi/AuthentiGo"><img src="https://travis.ibm.com/Alessio-Savi/AuthentiGo.svg?token=wWmbVrxsSXYSyYLLhamH&amp;branch=master" alt="Build Status"></a></p>
+<p>Simple Golang tool that work as a "plug-and-play" executable for authenticate your webapplication</p>
+<h2>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Getting Started</h2>
+<h3>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Documentation</h3>
+<p><a href="https://pages.github.ibm.com/Alessio-Savi/AuthentiGo/">Online documentation</a></p>
+<p>During the development of every internal tools, 90% of the time it's request to create an "<strong><em>authentication layer</em></strong>" in order to restrict the access to the services only to the person admitted.</p>
+<p>In some circonstances you can simply pick up an external webserver (like <em>nginx/apache/happroxy</em>) and <em>proxypass/reroute</em> the service. If you are the root of the machine you can also forward the traffic only to the people admitted to receive it by <em>forwarding</em> the TCP traffic only to the customer allowed.</p>
+<p>But what in case that you are a little IT Specials that <em>can't touch the enviroinment</em> and <em>want to restrict the access to a service using an <strong>authentication layer</strong></em>?</p>
+<p>Taaa dan!</p>
+<p>This tool is developed for have few HTTP API interfaces in order:</p>
+<ul>
+<li>Registration layer for save customers into a database;</li>
+<li>Login layer in order to get access to the services to the customer that have previously registered;</li>
+<li>Restrict access to the service only for the customer that are allowed;</li>
+</ul>
+<h3>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Features</h3>
+<ul>
+<li>
+<p>Login phase:</p>
+<p>-- Purpouse:</p>
+<pre><code>  1) Auth is needed in order to receive the token;
+  2) Retrict the access
+</code></pre>
+<p>-- Capabilites:</p>
+<pre><code>  * *Input valdation methods*
+  * *BasicAuth headers welcome*
+  * *Verify if user match with the one in MongoDB*
+  * *Generate token and set it into Redis*
+</code></pre>
+</li>
+<li>
+<p>Registration</p>
+<p>-- Purpouse:</p>
+<pre><code>  1) Save the user that can access to the services
+</code></pre>
+<p>-- Capabilities:</p>
+<pre><code>  * *Input valdation methods*
+  * *BasicAuth headers welcome*
+  * *Persistent data saved into MongoDB*
+</code></pre>
+</li>
+<li>
+<p>Verification</p>
+<p>-- Purpouse:</p>
+<pre><code>  1) Create a middleware for "proxypass" the request
+  2) Verify the authentication of every request
+  3) Be as much "standard" as possibile in order to be used without integration issue
+  4) Have a performing verification layer that can be scaled @runtime
+</code></pre>
+<p>-- Capabilites:</p>
+<pre><code>  * *RESTfull implementation*
+  * *Input valdation methods*
+  * *Redis authentication for great performance*
+</code></pre>
+</li>
+</ul>
+<p>The tool is intended to:</p>
+<ul>
+<li>Run only on Linux machine (<em>test on windows is appreciated</em>);</li>
+<li>Bind the necessary network resources over a network device that can expose data to the network (ex: 0.0.0.0);</li>
+<li>Consume as much low memory as possible (gzip data if request by the client);</li>
+<li>Be scalable;</li>
+<li>Don't steal time to the request</li>
+</ul>
+<p>During the development of the source code, I'll will try as much as i can to write modular function that can be replaced or swapped. Feel free to copy and paste the code without ask, but please license your code as a MIT licensed software</p>
+<h2>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Prerequisites</h2>
+<p>The installation process is described only for <strong><em>Linux</em></strong> machine.</p>
+<p>The software is coded in:</p>
+<ul>
+<li>Golang</li>
+</ul>
+<p>The software use two different database:</p>
+<ul>
+<li>MongoDB
+-- Used for store the data of the customer;</li>
+<li>Redis
+-- Used for store the token of the customer in order to speed up the authentication process;</li>
+</ul>
+<p>For run the software you need:</p>
+<ol>
+<li>Golang</li>
+<li>MongoDB</li>
+<li>Redis-Server</li>
+</ol>
+<h3>
+<a id="1-install-golang" class="anchor" href="#1-install-golang" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>1) Install Golang</h3>
+<p>In order to install golang in your machine, you have to run the following commands:</p>
+<ul>
+<li>NOTE:
+<ul>
+<li>It's preferable <strong><em>to don't run these command as root</em></strong>. Simply <em><code>chown</code></em> the <em><code>root_foolder</code></em> of golang to be compliant with your user and run the script.</li>
+<li>Run this "installer" script only once</li>
+</ul>
+</li>
+</ul>
+<div class="highlight highlight-source-shell"><pre>golang_version=<span class="pl-s"><span class="pl-pds">"</span>1.12.4<span class="pl-pds">"</span></span>
+golang_link=<span class="pl-s"><span class="pl-pds">"</span>https://dl.google.com/go/go<span class="pl-smi">$golang_version</span>.linux-amd64.tar.gz<span class="pl-pds">"</span></span>
+root_foolder=<span class="pl-s"><span class="pl-pds">"</span>/opt/GOLANG<span class="pl-pds">"</span></span> <span class="pl-c"><span class="pl-c">#</span> Set the tree variable needed for build the enviroinment</span>
+go_source=<span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$root_foolder</span>/go<span class="pl-pds">"</span></span>
+go_projects=<span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$root_foolder</span>/go_projects<span class="pl-pds">"</span></span>
+
+mkdir <span class="pl-smi">$root_foolder</span> <span class="pl-c"><span class="pl-c">#</span> creating dir for golang source code</span>
+<span class="pl-c1">cd</span> <span class="pl-smi">$root_foolder</span> <span class="pl-c"><span class="pl-c">#</span> entering dir</span>
+wget <span class="pl-smi">$golang_link</span> <span class="pl-c"><span class="pl-c">#</span>downloading golang</span>
+tar xf <span class="pl-s"><span class="pl-pds">$(</span>ls <span class="pl-k">|</span> grep <span class="pl-s"><span class="pl-pds">"</span>tar<span class="pl-pds">"</span></span><span class="pl-pds">)</span></span> <span class="pl-c"><span class="pl-c">#</span> extract only the tar file</span>
+mkdir go_projects
+
+<span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">'</span></span>
+<span class="pl-s">export GOPATH="$go_projects"</span>
+<span class="pl-s">export GOBIN="$GOPATH/bin"</span>
+<span class="pl-s">export GOROOT="$go_source"</span>
+<span class="pl-s">export PATH="$PATH:$GOROOT/bin:$GOBIN"</span>
+<span class="pl-s"><span class="pl-pds">'</span></span> <span class="pl-k">&gt;&gt;</span> /home/<span class="pl-s"><span class="pl-pds">$(</span>whoami<span class="pl-pds">)</span></span>/.bashrc
+
+<span class="pl-c1">source</span> /home/<span class="pl-s"><span class="pl-pds">$(</span>whoami<span class="pl-pds">)</span></span>/.bashrc
+
+go version</pre></div>
+<p>After running these command, you have to be able to see the golang version installed.</p>
+<h3>
+<a id="2-install-mongodb" class="anchor" href="#2-install-mongodb" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2) Install MongoDB</h3>
+<p>In order to install MongoDB (and some related usefull utils), you have to run the following commands:</p>
+<p><strong><em>The following operations have to be done as root</em></strong></p>
+<pre><code>```bash
+mkdir -p /opt/RPMs/MONGO
+cd /opt/RPMs/MONGO
+MONGO_VERSION="4.0.9-1.el7.x86_64"
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-server-$MONGO_VERSION.rpm
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-mongos-$MONGO_VERSION.rpm
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-tools-$MONGO_VERSION.rpm
+wget https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/mongodb-org-shell-$MONGO_VERSION.rpm
+for i in $(ls); do echo "|Installing ==== $i ====|"; sudo rpm -Uvh $i ; done
+
+sudo service mongod start
+```
+</code></pre>
+<h3>
+<a id="3-install-redis" class="anchor" href="#3-install-redis" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3) Install Redis</h3>
+<p>In order to compile Redis from source, you have to run the following commands:</p>
+<p><strong><em>The following operations have to be done as root</em></strong></p>
+<pre><code>```bash
+mkdir /opt/Redis
+cd $_
+REDIS_VERSION="5.0.4"
+wget http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
+tar xf redis-$REDIS_VERSION.tar.gz
+cd redis-$REDIS_VERSION
+for i in `find . -type f | grep -v git` ; do sed -i 's/-O[[:digit:]]/-Ofast/g' $i ; done
+make
+make install
+echo 512 &gt; /proc/sys/net/core/somaxconn
+echo vm.overcommit_memory = 1 &gt;&gt; /etc/sysctl.conf
+sysctl -p
+```
+</code></pre>
+<p><strong><em>AUTOMATED CONFIGURATION</em></strong>:</p>
+<p>Redis came with an usefull script for automatize the install the server.
+If you want to use the default configuration provided, use the following command:</p>
+<pre><code>```bash
+cd utils
+bash install_server.sh
+```
+</code></pre>
+<p>Now you have to press enter for confirm the default configuration location.</p>
+<h4>
+<a id="post-prerequisites" class="anchor" href="#post-prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Post Prerequisites</h4>
+<p><strong><em>NOTE</em></strong>:</p>
+<ul>
+<li><em>It's preferable to logout and login to the system for a fresh reload of the configuration after have installed all the packaged listed below.</em></li>
+</ul>
+<h2>
+<a id="installing" class="anchor" href="#installing" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installing</h2>
+<p>The dependendencies used by the tool can be downloaded as following:
+NOTE:</p>
+<pre><code>```bash
+go get -v -u github.com/valyala/fasthttp
+go get -v -u github.com/valyala/gozstd
+go get -v -u github.com/sirupsen/logrus
+go get -v -u github.com/onrik/logrus/filename
+go get -v -u github.com/go-redis/redis
+go get -v -u github.com/globalsign/mgo
+go get -v -u github.com/globalsign/mgo/bson
+go get -v -u github.com/alessiosavi/GoUtils # Download the code
+```
+</code></pre>
+<p>Than you have to download it manually</p>
+<pre><code>```bash
+cd $GOPATH/src
+git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
+cd AuthentiGo
+go build
+```
+</code></pre>
+<h2>
+<a id="running-the-tests" class="anchor" href="#running-the-tests" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Running the tests</h2>
+<p>go test -v test/authentigo_test.go</p>
+<h2>
+<a id="deployment" class="anchor" href="#deployment" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deployment</h2>
+<p>You can deploy the application in two methods:</p>
+<ul>
+<li>Deploy the executable in your remote machine
+<ul>
+<li>Build the source in your local machine</li>
+<li>Deploy the executable</li>
+</ul>
+</li>
+<li>Copy the code to you remote machine, run the following commands</li>
+</ul>
+<div class="highlight highlight-source-shell"><pre>scp -r authentigo.go auth/ user@machine.preprodiction.log:/home/no_sudo_user/AuthentiGo <span class="pl-c"><span class="pl-c">#</span>Copy the code into your user folder</span>
+ssh user@machine.preprodiction.log <span class="pl-c"><span class="pl-c">#</span> Log in into the machine</span>
+<span class="pl-c1">cd</span> /home/no_sudo_user/AuthentiGo</pre></div>
+<p>Now that you have a fresh version of the code and you are in the directory of the sources file</p>
+<pre><code>```bash
+exe="authentigo" # Name of the executable generated
+code="authentigo.go" # Name of the main source code
+
+echo "Killing the process ..."
+pkill $exe # Killing all process that are named like $exe value
+echo "Deleting old code ..."
+truncate -s0 $code # Empty the file containing the old code
+echo "Copy your code"
+vi $code # Paste the code here
+echo "Cleaning old compilation files ..."
+go clean # Remove build executable
+echo "Copy the new utilies sources files ..."
+cp -r $code auth/ $GOPATH/src/authentigo # Copy the code into the $GOPATH
+echo "Building new executables ... "
+go build $code
+echo "Stripping debug symbols"
+strip -s $exe
+mkdir logs # create a folder for the logs
+nohup ./$exe -path utils -port 8080 &gt; logs/logs.txt &amp; # Just run in background
+```
+</code></pre>
+<h2>
+<a id="built-with" class="anchor" href="#built-with" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Built With</h2>
+<ul>
+<li>
+<a href="https://github.com/valyala/fasthttp">FastHTTP</a> - HTTP Framework | Tuned for high performance. Zero memory allocations in hot paths. Up to 10x faster than net/http</li>
+<li>
+<a href="https://github.com/Sirupsen/logrus">logrus</a> - Pretty logging framework | Not the fastest but very cool and customizable
+<ul>
+<li>
+<a href="https://github.com/onrik/logrus/filename">filename</a> - Plugin for logrus | Used fo print the filename and the logline at each entries of the log</li>
+</ul>
+</li>
+<li>
+<a href="https://github.com/go-redis/redis">redis</a> - Useful framework for talk with Redis DB</li>
+<li>
+<a href="https://github.com/globalsign/mgo">mgo</a> - The MongoDB driver for Go</li>
+</ul>
+<h2>
+<a id="contributing" class="anchor" href="#contributing" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Contributing</h2>
+<ul>
+<li>Feel free to open issue in order to <strong><em>require new functionality</em></strong>
+</li>
+<li>Feel free to open issue <strong><em>if you discover a bug</em></strong>
+</li>
+<li>New idea/request/concept are very appreciated!</li>
+</ul>
+<h2>
+<a id="versioning" class="anchor" href="#versioning" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Versioning</h2>
+<p>We use <a href="http://semver.org/">SemVer</a> for versioning.</p>
+<h2>
+<a id="authors" class="anchor" href="#authors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors</h2>
+<ul>
+<li>
+<strong>Alessio Savi</strong> - <em>Initial work &amp; Concept</em> - <a href="https://github.ibm.com/Alessio-Savi">IBM Client Innovation Center [CIC]</a>
+</li>
+</ul>
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
+<p>This project is licensed under the MIT License - see the <a href="LICENSE.md">LICENSE.md</a> file for details</p>
+<h2>
+<a id="acknowledgments" class="anchor" href="#acknowledgments" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Acknowledgments</h2>
+<p>This backend tool it's intended to run over a VPN and be served "<em>proxypassed &amp; secured</em>" by a webserver like Apache or Nginx, in order to crypt the traffic and provide a good layer of security.</p>
+<p>However, few basic security enhancements will be developed just for fun.</p>
+<p><strong><em>DO NOT RUN THIS TOOL AS SUDOUSERS - ROOT</em></strong></p>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
