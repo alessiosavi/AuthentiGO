@@ -56,6 +56,7 @@ func Decrypt(data string, passphrase string) string {
 	nonce, ciphertext := raw[:nonceSize], raw[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
+		log.Error("Error during decrypt: ", err)
 		panic(err.Error())
 	}
 	return string(plaintext)
@@ -73,4 +74,16 @@ func VerifyTokens(token1, token2, password string) bool {
 	logrus.Debug("VerifyTokens | First token decrypted [", token2, " -> ", decrypted2, "]")
 	return strings.Compare(decrypted1, decrypted2) == 0
 	//return strings.Compare(Decrypt(token1, password), Decrypt(token2, password)) == 0
+}
+
+// VerifyPlainPasswords is delegated to verify if the incoming password is equals to the one stored in the DB
+func VerifyPlainPasswords(plain_psw_user, chiper_psw_db, key string) bool {
+	log.Debug("VerifyPlainPasswords | Verifying if ["+plain_psw_user+"] belong to [", chiper_psw_db, "]")
+	plain_db := Decrypt(chiper_psw_db, key)
+	log.Debug("VerifyPlainPasswords | Plain DB: ", plain_db)
+	return strings.Compare(plain_psw_user, plain_db) == 0
+}
+
+func encodeToB64(raw string) string {
+	return b64.StdEncoding.EncodeToString([]byte(raw))
 }

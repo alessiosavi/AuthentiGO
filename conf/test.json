@@ -1,7 +1,7 @@
 {
     "Host": "127.0.0.1",
     "Port": 11001,
-    "Version": "v0.1.4",
+    "Version": "v0.1.5",
     "SSL": {
         "Path": "./conf/ssl/",
         "Cert": "localhost.crt",
