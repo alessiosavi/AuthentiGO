@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	basiccrypt "github.ibm.com/Alessio-Savi/AuthentiGo/crypt"
+	basiccrypt "alessiosavi/AuthentiGo/crypt"
 
 	"github.com/go-redis/redis"
 	"github.com/valyala/fasthttp"
-	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
-	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
-	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
+	basicmongo "alessiosavi/AuthentiGo/database/mongo"
+	basicredis "alessiosavi/AuthentiGo/database/redis"
+	"alessiosavi/AuthentiGo/datastructures"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"

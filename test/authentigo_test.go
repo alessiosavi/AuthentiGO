@@ -3,7 +3,7 @@ package authentigo
 import (
 	"encoding/json"
 	"fmt"
-	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
+	"alessiosavi/AuthentiGo/datastructures"
 	"io/ioutil"
 	"net/http"
 	"path"

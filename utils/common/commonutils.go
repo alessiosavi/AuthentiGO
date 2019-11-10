@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
-	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
+	"alessiosavi/AuthentiGo/datastructures"
 )
 
 // VerifyCommandLineInput is delegated to manage the inputer parameter provide with the input flag from command line

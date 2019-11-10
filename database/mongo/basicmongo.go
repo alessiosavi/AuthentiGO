@@ -3,7 +3,7 @@ package basicmongo
 import (
 	"strings"
 
-	"github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
+	"alessiosavi/AuthentiGo/datastructures"
 
 	log "github.com/sirupsen/logrus"
 
