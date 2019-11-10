@@ -12,19 +12,19 @@ import (
 	// General purpose library
 	utils "github.com/alessiosavi/GoUtils"
 	// Provide methods for manage authentication phase
-	authutils "github.ibm.com/Alessio-Savi/AuthentiGo/auth"
+	authutils "alessiosavi/AuthentiGo/auth"
 	// Provide method for crypt and decrypt data
-	basiccrypt "github.ibm.com/Alessio-Savi/AuthentiGo/crypt"
+	basiccrypt "alessiosavi/AuthentiGo/crypt"
 	// Wrap redis methods
-	basicredis "github.ibm.com/Alessio-Savi/AuthentiGo/database/redis"
+	basicredis "alessiosavi/AuthentiGo/database/redis"
 	// Wrap mgo methods
-	basicmongo "github.ibm.com/Alessio-Savi/AuthentiGo/database/mongo"
+	basicmongo "alessiosavi/AuthentiGo/database/mongo"
 	// Common utils
-	commonutils "github.ibm.com/Alessio-Savi/AuthentiGo/utils/common"
+	commonutils "alessiosavi/AuthentiGo/utils/common"
 	// Provide exportable datastructure
-	datastructures "github.ibm.com/Alessio-Savi/AuthentiGo/datastructures"
+	datastructures "alessiosavi/AuthentiGo/datastructures"
 	// HTTP utils
-	httputils "github.ibm.com/Alessio-Savi/AuthentiGo/utils/http"
+	httputils "alessiosavi/AuthentiGo/utils/http"
 
 	// == External dependencies ==
 
