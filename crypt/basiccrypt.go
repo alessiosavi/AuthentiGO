@@ -10,6 +10,8 @@ import (
 	"io"
 	"strings"
 
+	commonutils "alessiosavi/AuthentiGo/utils/common"
+
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,7 +34,8 @@ func Encrypt(data []byte, passphrase string) string {
 
 func createHash(key string) string {
 	hasher := md5.New()
-	hasher.Write([]byte(key))
+	_, err := hasher.Write([]byte(key))
+	commonutils.Check(err, "createHash")
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
