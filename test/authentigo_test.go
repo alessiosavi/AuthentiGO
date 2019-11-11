@@ -1,9 +1,10 @@
 package authentigo
 
 import (
+	"alessiosavi/AuthentiGo/datastructures"
+	commonutils "alessiosavi/AuthentiGo/utils/common"
 	"encoding/json"
 	"fmt"
-	"alessiosavi/AuthentiGo/datastructures"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -136,6 +137,7 @@ func TestLogin(t *testing.T) {
 // TestOK is delegated to unmarshall the json string and verify if the field in input contains the "correct" given data
 func verifyLoginResponse(jsonData string) bool {
 	var response datastructures.Response
-	json.Unmarshal([]byte(jsonData), &response)
+	err := json.Unmarshal([]byte(jsonData), &response)
+	commonutils.Check(err, "verifyLoginResponse")
 	return response.Status
 }
