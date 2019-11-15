@@ -57,10 +57,16 @@ func main() {
 
 	// ==== CONNECT TO MONGO ====
 	mongoClient := basicmongo.InitMongoDBConnection(cfg.Mongo.Host, cfg.Mongo.Port, "", true)
+	if mongoClient == nil {
+		log.Fatal("Unable to connect to mongo!")
+	}
 	defer mongoClient.Close()
 
 	// ==== CONNECT TO REDIS ====
 	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Token.DB)
+	if redisClient == nil {
+		log.Fatal("Unable to connect to redis!")
+	}
 	defer redisClient.Close()
 
 	log.Info("main | Spawing API services")

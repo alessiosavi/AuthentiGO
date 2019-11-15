@@ -22,7 +22,7 @@ func ConnectToDb(addr string, port string, db int) *redis.Client {
 	log.Info("Connecting to -> ", client)
 	err := client.Ping().Err()
 	if err != nil {
-		log.Fatal("Impossibile to connecto to DB ....| CLIENT: ", addr, ":", port, " | ERR: ", err)
+		log.Error("Impossibile to connecto to DB ....| CLIENT: ", addr, ":", port, " | ERR: ", err)
 		return nil
 	}
 	return client
