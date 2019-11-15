@@ -9,7 +9,7 @@
         "Enabled": false
     },
     "Mongo": {
-        "Host": "127.0.0.1",
+        "Host": "172.24.138.159",
         "Port": 27017,
         "Users": {
             "DB": "AuthentiGO_DB",
@@ -17,7 +17,7 @@
         }
     },
     "Redis": {
-        "Host": "127.0.0.1",
+        "Host": "172.24.138.159",
         "Port": "6379",
         "Token": {
             "Expire": 300,
