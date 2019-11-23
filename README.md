@@ -1,7 +1,8 @@
 
 # AuthentiGo
 
-[![Build Status](https://travis.ibm.com/Alessio-Savi/AuthentiGo.svg?token=wWmbVrxsSXYSyYLLhamH&branch=master)](https://github.ibm.com/Alessio-Savi/AuthentiGo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/alessiosavi/AuthentiGO)](https://goreportcard.com/report/github.com/alessiosavi/AuthentiGO) [![GoDoc](https://godoc.org/github.com/alessiosavi/AuthentiGO?status.svg)](https://godoc.org/github.com/alessiosavi/AuthentiGO) [![License](https://img.shields.io/github/license/alessiosavi/AuthentiGO)](https://img.shields.io/github/license/alessiosavi/AuthentiGO) [![Version](https://img.shields.io/github/v/tag/alessiosavi/AuthentiGO)](https://img.shields.io/github/v/tag/alessiosavi/AuthentiGO) [![Code size](https://img.shields.io/github/languages/code-size/alessiosavi/AuthentiGO)](https://img.shields.io/github/languages/code-size/alessiosavi/AuthentiGO) [![Repo size](https://img.shields.io/github/repo-size/alessiosavi/AuthentiGO)](https://img.shields.io/github/repo-size/alessiosavi/AuthentiGO) [![Issue open](https://img.shields.io/github/issues/alessiosavi/AuthentiGO)](https://img.shields.io/github/issues/alessiosavi/AuthentiGO)
+[![Issue closed](https://img.shields.io/github/issues-closed/alessiosavi/AuthentiGO)](https://img.shields.io/github/issues-closed/alessiosavi/AuthentiGO)
 
 Simple Golang tool that work as a "plug-and-play" executable for authenticate your webapplication
 
