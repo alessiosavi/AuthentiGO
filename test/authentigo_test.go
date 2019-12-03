@@ -23,7 +23,7 @@ type TestDataNet struct {
 func initNetData() Data {
 	data := Data{}
 	// data.netdata.url = "172.24.138.159"
-	data.netdata.url = "127.0.0.1"
+	data.netdata.url = "0.0.0.0"
 	data.netdata.port = "11001"
 	return data
 }
