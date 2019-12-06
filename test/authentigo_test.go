@@ -67,6 +67,7 @@ func generateOKLoginData(protocols []string, url, port, endpoint, userKey, pswKe
 	fmt.Println(loginOKData)
 	return loginOKData
 }
+
 func generateLoginData(protocols []string, url, port, endpoint, userKey, pswKey string, usernames, passwords []string) []string {
 	var loginData []string
 	for _, protocol := range protocols {

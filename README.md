@@ -40,7 +40,7 @@ This tool is developed for have few HTTP API interfaces in order:
         * *BasicAuth headers welcome*
         * *Verify if user match with the one in MongoDB*
         * *Generate token and set it into Redis*
-- Registration
+- Registration phase
 
     -- Purpouse:
 
@@ -51,7 +51,7 @@ This tool is developed for have few HTTP API interfaces in order:
         * *BasicAuth headers welcome*
         * *Persistent data saved into MongoDB*
 
-- Verification
+- Verification phase
 
     -- Purpouse:
 
@@ -96,6 +96,21 @@ For run the software you need:
 2) MongoDB
 3) Redis-Server
 
+### You can run the software installing from source or using docker compose for build the container
+
+### Install with docker-compose
+
+Be sure that `docker` and `docker-compose` are installed in your system, than run:  
+
+    ```bash
+    bash build.sh
+    ```
+
+***NOTE***:  
+The script will remove any previous images related to this tool (the image of `AuthentGo`, and the two database `RedisDB` and `MongoDB`).
+
+Alternatively, you can install from source following the below steps.
+
 ### 1) Install Golang
 
 In order to install golang in your machine, you have to run the following commands:
@@ -105,7 +120,7 @@ In order to install golang in your machine, you have to run the following comman
   - Run this "installer" script only once
 
 ```bash
-golang_version="1.12.4"
+golang_version="1.13.4"
 golang_link="https://dl.google.com/go/go$golang_version.linux-amd64.tar.gz"
 root_foolder="/opt/GOLANG" # Set the tree variable needed for build the enviroinment
 go_source="$root_foolder/go"
@@ -191,8 +206,9 @@ __*NOTE*__:
 
 ## Installing
 
+### Golang < 1.11
+
 The dependendencies used by the tool can be downloaded as following:
-NOTE:
 
     ```bash
     go get -v -u github.com/valyala/fasthttp
@@ -202,15 +218,28 @@ NOTE:
     go get -v -u github.com/go-redis/redis
     go get -v -u github.com/globalsign/mgo
     go get -v -u github.com/globalsign/mgo/bson
-    go get -v -u github.com/alessiosavi/GoUtils # Download the code
+    go get -v -u github.com/alessiosavi/GoUtils
     ```
 
 Than you have to download it manually
 
     ```bash
     cd $GOPATH/src
-    git clone --recursive git@github.ibm.com:Alessio-Savi/AuthentiGo.git
+    git clone --recursive https://github.com/alessiosavi/AuthentiGO
     cd AuthentiGo
+    go build
+    ```
+
+### Golang >= 1.11
+
+You can use the `go clean` for clean the repository and download the dependencies:
+
+    ```bash
+    git clone --depth=1 https://github.com/alessiosavi/AuthentiGO
+    cd AuthentiGO
+    go clean
+    go mod tidy
+    go get -u -v ./...
     go build
     ```
 
@@ -256,6 +285,8 @@ Now that you have a fresh version of the code and you are in the directory of th
     mkdir logs # create a folder for the logs
     nohup ./$exe -path utils -port 8080 > logs/logs.txt & # Just run in background
     ```
+
+***NOTE***: If you want to avoid manual deploy, you can use `docker-compose`
 
 ## Built With
 
