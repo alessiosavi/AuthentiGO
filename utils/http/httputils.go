@@ -31,7 +31,6 @@ func ListAndServerGZIP(host string, _port int, gzipHandler fasthttp.RequestHandl
 }
 
 func ListAndServerSSL(host, _path, pub, priv string, _port int, gzipHandler fasthttp.RequestHandler) {
-
 	pub = path.Join(_path, pub)
 	priv = path.Join(_path, priv)
 	if fileutils.FileExists(pub) && fileutils.FileExists(priv) {
@@ -42,7 +41,7 @@ func ListAndServerSSL(host, _path, pub, priv string, _port int, gzipHandler fast
 			log.Warn("ListAndServerSSL | Port [", port, "] seems used :/")
 			for i := 0; i < 10; i++ {
 				port := strconv.Itoa(commonutils.Random(8081, 8090)) // Generate a new port to use
-				log.Info("ListAndServerSSL | Round ", strconv.Itoa(i), "] No luck! Connecting to anotother random port [@", port, "] ...")
+				log.Info("ListAndServerSSL | Round ", i, "] No luck! Connecting to anotother random port [@"+port+"] ...")
 				err := fasthttp.ListenAndServeTLS(host+":"+port, pub, priv, gzipHandler) // Trying with the random port generate few step above
 				if err == nil {                                                          // Connection estabileshed! Not reached
 					log.Info("ListAndServerSSL | Connection estabilished @[https://", host, ":", port)
@@ -51,16 +50,21 @@ func ListAndServerSSL(host, _path, pub, priv string, _port int, gzipHandler fast
 			}
 		}
 	}
+	log.Error("ListAndServerSSL | Unable to find certificates: pub[" + pub + "] | priv[" + priv + "]")
 }
 
+// Enhance the security with additional sec header
 func SecureRequest(ctx *fasthttp.RequestCtx, ssl bool) {
-	ctx.Response.Header.Set("X-Frame-Options", "DENY")
+	ctx.Response.Header.Set("Feature-Policy", "geolocation 'none'; microphone 'none'; camera 'self'")
+	ctx.Response.Header.Set("Referrer-Policy", "no-referrer")
+	ctx.Response.Header.Set("x-frame-options", "SAMEORIGIN")
 	ctx.Response.Header.Set("X-Content-Type-Options", "nosniff")
+	ctx.Response.Header.Set("X-Permitted-Cross-Domain-Policies", "none")
 	ctx.Response.Header.Set("X-XSS-Protection", "1; mode=block")
 	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
 	if ssl {
 		ctx.Response.Header.Set("Content-Security-Policy", "upgrade-insecure-requests")
-		ctx.Response.Header.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		ctx.Response.Header.Set("Strict-Transport-Security", "max-age=60; includeSubDomains; preload")
+		ctx.Response.Header.Set("expect-ct", "max-age=60, enforce")
 	}
-
 }

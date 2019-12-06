@@ -49,10 +49,12 @@ type Response struct {
 
 // middlewareRequest Structure used for manage the request among the user and the external service
 type MiddlewareRequest struct {
-	Username string `json:"user"`   // Username of the customer that require the service
-	Token    string `json:"token"`  // Token related to the user for consume the service
-	Method   string `json:"method"` // Is the external service that you want to call
-	Data     string `json:"data"`   // Is the arguments that you want to encode in your request
+	Username string `json:"user"`    // Username of the customer that require the service
+	Token    string `json:"token"`   // Token related to the user for consume the service
+	Service  string `json:"service"` // Is the external service that you want to call
+	Method   string `json:"method"`  // POST-GET-HEAD etc etc
+	Headers  string `json:"headers"` // Headers to send in the request
+	Data     string `json:"data"`    // Is the arguments that you want to encode in your request
 }
 
 // Person structure of a customer for save it into the DB during registration phase.

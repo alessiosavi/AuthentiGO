@@ -86,7 +86,3 @@ func VerifyPlainPasswords(plain_psw_user, chiper_psw_db, key string) bool {
 	log.Debug("VerifyPlainPasswords | Plain DB: ", plain_db)
 	return strings.Compare(plain_psw_user, plain_db) == 0
 }
-
-func encodeToB64(raw string) string {
-	return b64.StdEncoding.EncodeToString([]byte(raw))
-}

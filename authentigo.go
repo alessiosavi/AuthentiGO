@@ -79,13 +79,11 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 	m := func(ctx *fasthttp.RequestCtx) {
 		if cfg.SSL.Enabled {
 			log.Debug("handleRequests | SSL is enabled!")
-			httputils.SecureRequest(ctx, true)
-		} else {
-			httputils.SecureRequest(ctx, false)
 		}
-		ctx.Response.Header.Set("AuthentiGo", "$v0.1.6")
+		httputils.SecureRequest(ctx, cfg.SSL.Enabled)
+		ctx.Response.Header.Set("AuthentiGo", "$v0.2.1")
 
-		// Avoid to print stats req
+		// Avoid to print stats for the expvar handler
 		if strings.Compare(string(ctx.Path()), "/stats") != 0 {
 			log.Info("\n|REQUEST --> ", ctx, " \n|Headers: ", ctx.Request.Header.String(), "| Body: ", string(ctx.PostBody()))
 		}
@@ -96,10 +94,8 @@ func handleRequests(cfg datastructures.Configuration, mgoClient *mgo.Session, re
 		case "/benchmark":
 			fastBenchmarkHTTP(ctx) // Benchmark API
 		case "/auth/login":
-			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
 			AuthLoginWrapper(ctx, mgoClient, redisClient, cfg) // Login functionality [Test purpouse]
 		case "/auth/register":
-			ctx.Request.Header.Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
 			AuthRegisterWrapper(ctx, mgoClient, cfg) // Register an user into the DB [Test purpouse]
 		case "/auth/delete":
 			DeleteCustomerHTTP(ctx, cfg.Mongo.Users.DB, cfg.Mongo.Users.Collection, redisClient, mgoClient)
@@ -166,8 +162,10 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisCli
 	} else { // error parsing credential
 		log.Info("AuthLoginWrapper | Error parsing credential!! |", username+":"+password)
 		ctx.Response.Header.DelCookie("GoLog-Token")
-		err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Missing or manipulated input", Data: nil})
-		commonutils.Check(err, "AuthLoginWrapper")
+		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		ctx.Response.Header.Set("WWW-Authenticate", "Basic realm=Restricted")
+		//err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Missing or manipulated input", Data: nil})
+		//commonutils.Check(err, "AuthLoginWrapper")
 	}
 }
 
@@ -176,6 +174,7 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, redisCli
 func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, mgoClient *mgo.Session, cfg datastructures.Configuration) {
 	log.Debug("AuthRegisterWrapper | Starting register functionalities! | Parsing username and password ...")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
+	ctx.Request.Header.Set("WWW-Authenticate", `Basic realm="Restricted"`)
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request
 	if authutils.ValidateCredentials(username, password) {
 		log.Debug("AuthRegisterWrapper | Input validated | User: ", username, " | Pass: ", password, " | Calling core functionalities ...")
@@ -279,7 +278,7 @@ func fastBenchmarkHTTP(ctx *fasthttp.RequestCtx) {
 }
 
 // middleware is the function delegated to take in charge the request of the customer, be sure that is logged in, then call
-// the external service that the user want to contat. If the customers is authorized (token proved in request match with the one retrieved)
+// the external service that the user want to contact. If the customers is authorized (the token proved in the request match with the one retrieved
 // from Redis), the query will be executed and the result will be showed back as a response.
 func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")

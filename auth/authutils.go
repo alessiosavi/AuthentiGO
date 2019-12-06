@@ -9,11 +9,12 @@ import (
 
 	basiccrypt "alessiosavi/AuthentiGo/crypt"
 
-	"github.com/go-redis/redis"
-	"github.com/valyala/fasthttp"
 	basicmongo "alessiosavi/AuthentiGo/database/mongo"
 	basicredis "alessiosavi/AuthentiGo/database/redis"
 	"alessiosavi/AuthentiGo/datastructures"
+	stringutils "github.com/alessiosavi/GoGPUtils/string"
+	"github.com/go-redis/redis"
+	"github.com/valyala/fasthttp"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -172,8 +173,12 @@ func DeleteCustomerHTTPCore(user, password, token, db, coll string, redisClient 
 // In case of error will return two emtpy string; in case of success will return (username,password)
 func ParseAuthCredentialFromHeaders(auth []byte) (string, string) {
 	basicAuthPrefix := []byte("Basic ")
+	if len(auth) <= len(basicAuthPrefix) {
+		log.Debug("parseAuthCredentialFromHeaders | Headers does not contains no auth encoded")
+		return "", ""
+	}
 	payload, err := base64.StdEncoding.DecodeString(string(auth[len(basicAuthPrefix):])) // Extract only the string after the "Basic "
-	log.Info("parseAuthCredentialFromHeaders | Payload extracted: ", payload)
+	log.Info("parseAuthCredentialFromHeaders | Payload extracted: ", string(payload))
 	if err != nil {
 		log.Error("parseAuthCredentialFromHeaders | STOP | KO | ", err)
 		return "", "" // error cause
@@ -197,7 +202,7 @@ func ValidateCredentials(user string, pass string) bool {
 
 // PasswordValidation execute few check on the password in input
 func PasswordValidation(password string) bool {
-	if strings.Compare(password, "") == 0 {
+	if stringutils.IsBlank(password) {
 		log.Warn("PasswordValidation | Password is empty :/")
 		return false
 	}
@@ -205,8 +210,8 @@ func PasswordValidation(password string) bool {
 		log.Warn("PasswordValidation | Password len not valid")
 		return false
 	}
-	myReg := regexp.MustCompile("^[a-zA-Z0-9]{4,32}$") // Only letter + number
-	if !myReg.MatchString(password) {                  // If the input don't match the regexp
+	myReg := regexp.MustCompile("^[a-zA-Z0-9'\"'+-.><=,;{}!@#$%^&_*()]{4,32}$") // Only letter + number
+	if !myReg.MatchString(password) {                                           // If the input don't match the regexp
 		log.Warn("PasswordValidation | Password have strange character :/ [", password, "]")
 		return false
 	}
@@ -216,7 +221,7 @@ func PasswordValidation(password string) bool {
 
 // ValidateUsername execute few check on the username in input
 func ValidateUsername(username string) bool {
-	if strings.Compare(username, "") == 0 {
+	if stringutils.IsBlank(username) {
 		log.Warn("ValidateUsername | Username is empty :/")
 		return false
 	}
@@ -224,8 +229,8 @@ func ValidateUsername(username string) bool {
 		log.Warn("ValidateUsername | Username len not valid")
 		return false
 	}
-	myReg := regexp.MustCompile("^[a-zA-Z0-9]{4,32}$") // The string have to contains ONLY (letter OR number)
-	if !myReg.MatchString(username) {                  // the input doesn't match the regexp
+	myReg := regexp.MustCompile("^[a-zA-Z0-9-_@]{4,32}$") // The string have to contains ONLY (letter OR number)
+	if !myReg.MatchString(username) {                     // the input doesn't match the regexp
 		log.Warn("ValidateUsername | Username have strange character :/ [", username, "]")
 		return false
 	}
@@ -236,7 +241,7 @@ func ValidateUsername(username string) bool {
 // ValidateToken execute few check on the token in input
 func ValidateToken(token string) bool {
 	log.Debug("ValidateToken | Validating [", token, "] ...")
-	if strings.Compare(token, "") == 0 {
+	if stringutils.IsBlank(token) {
 		log.Warn("ValidateToken | Token is empty :/")
 		return false
 	}
@@ -252,7 +257,7 @@ func ValidateToken(token string) bool {
 func RedirectCookie(ctx *fasthttp.RequestCtx, expire int) string {
 	var cookie string
 	cookie = string(ctx.Request.Header.Cookie("GoLog-Token"))
-	if strings.Compare(cookie, "") == 0 {
+	if stringutils.IsBlank(cookie) {
 		cookie = "USER_NOT_LOGGED_IN"
 	}
 	ctx.Response.Header.SetCookie(CreateCookie("GoLog-Token", cookie, expire))
@@ -285,8 +290,10 @@ func CreateCookie(key string, value string, expire int) *fasthttp.Cookie {
 func ValidateMiddlewareRequest(request datastructures.MiddlewareRequest) bool {
 	if ValidateUsername(request.Username) { // Validate the username
 		if ValidateToken(request.Token) { // Validate the token
-			if strings.Compare(request.Method, "") != 0 { // Verify if the request is not empty
-				return true
+			if !stringutils.IsBlank(request.Method) { // Verify if the request is not empty
+				if !stringutils.IsBlank(request.Data) {
+					return true
+				}
 			}
 		}
 	}
