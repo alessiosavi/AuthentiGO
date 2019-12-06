@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "0.0.0.0:11001:11001" 
-    #restart: always
+    restart: always
     expose:
       - 11001
     depends_on: 
