@@ -14,7 +14,8 @@ services:
       - redisdb
       - mongodb
     network_mode: "host"
-
+    volumes:
+      - go-modules:/go/pkg/mod
 
   mongodb:
     container_name: mongodb
@@ -48,3 +49,4 @@ services:
 volumes:
   mongo-db:
   redis-db:
+  go-modules:

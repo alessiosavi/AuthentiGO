@@ -1,6 +1,6 @@
-FROM golang:latest
+FROM golang:1.13.5-alpine
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ make ; apt clean ; rm -rf /var/lib/apt/lists/* 
+#RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ make ; apt clean ; rm -rf /var/lib/apt/lists/* 
 
 LABEL maintainer="Alessio Savi <alessiosavibtc@gmail.com>"
 
