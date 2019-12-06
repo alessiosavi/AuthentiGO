@@ -3,8 +3,10 @@ package commonutils
 import (
 	"encoding/json"
 	"flag"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"alessiosavi/AuthentiGo/datastructures"
 
@@ -82,4 +84,30 @@ func AuthRegisterErrorHelper(ctx *fasthttp.RequestCtx, check, username, password
 		Check(err, "AuthRegisterErrorHelper")
 	}
 
+}
+
+// SetDebugLevel return the LogRus object by the given string
+func SetDebugLevel(level string) log.Level {
+	if strings.Compare(strings.ToLower(level), "debug") == 0 {
+		return log.DebugLevel
+	} else if strings.Compare(strings.ToLower(level), "trace") == 0 {
+		return log.TraceLevel
+	} else if strings.Compare(strings.ToLower(level), "info") == 0 {
+		return log.InfoLevel
+	} else if strings.Compare(strings.ToLower(level), "error") == 0 {
+		return log.ErrorLevel
+	} else if strings.Compare(strings.ToLower(level), "fatal") == 0 {
+		return log.FatalLevel
+	} else if strings.Compare(strings.ToLower(level), "panic") == 0 {
+		return log.PanicLevel
+	} else if strings.Contains(strings.ToLower(level), "warn") {
+		return log.WarnLevel
+	}
+	return log.DebugLevel
+}
+
+// Random initalizate a new seed using the UNIX Nano time and return an integer between the 2 input value
+func Random(min int, max int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(max-min) + min
 }

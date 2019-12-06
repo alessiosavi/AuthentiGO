@@ -10,7 +10,7 @@ import (
 
 	// == Internal import ==
 	// General purpose library
-	utils "github.com/alessiosavi/GoUtils"
+
 	// Provide methods for manage authentication phase
 	authutils "alessiosavi/AuthentiGo/auth"
 	// Provide method for crypt and decrypt data
@@ -53,7 +53,7 @@ func main() {
 
 	// ==== LOAD JSON CONF FILE
 	cfg := commonutils.VerifyCommandLineInput()
-	log.SetLevel(utils.SetDebugLevel(cfg.Log.Level))
+	log.SetLevel(commonutils.SetDebugLevel(cfg.Log.Level))
 
 	// ==== CONNECT TO MONGO ====
 	mongoClient := basicmongo.InitMongoDBConnection(cfg.Mongo.Host, cfg.Mongo.Port, "", true)

@@ -1,6 +1,5 @@
 FROM golang:latest
 
-
 RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ make ; apt clean ; rm -rf /var/lib/apt/lists/* 
 
 LABEL maintainer="Alessio Savi <alessiosavibtc@gmail.com>"

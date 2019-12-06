@@ -1,11 +1,15 @@
 package httputils
 
 import (
-	"github.com/alessiosavi/GoUtils"
-	log "github.com/sirupsen/logrus"
-	"github.com/valyala/fasthttp"
 	"path"
 	"strconv"
+
+	commonutils "alessiosavi/AuthentiGo/utils/common"
+
+	fileutils "github.com/alessiosavi/GoGPUtils/files"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fasthttp"
 )
 
 func ListAndServerGZIP(host string, _port int, gzipHandler fasthttp.RequestHandler) {
@@ -15,7 +19,7 @@ func ListAndServerGZIP(host string, _port int, gzipHandler fasthttp.RequestHandl
 	if err != nil {                                            // No luck, connection not succesfully. Probably port used ...
 		log.Warn("ListAndServerGZIP | Port [", port, "] seems used :/")
 		for i := 0; i < 10; i++ {
-			port := strconv.Itoa(utils.Random(8081, 8090)) // Generate a new port to use
+			port := strconv.Itoa(commonutils.Random(8081, 8090)) // Generate a new port to use
 			log.Info("ListAndServerGZIP | Round ", strconv.Itoa(i), "] No luck! Connecting to anotother random port [@", port, "] ...")
 			err := fasthttp.ListenAndServe(host+":"+port, gzipHandler) // Trying with the random port generate few step above
 			if err == nil {                                            // Connection estabileshed! Not reached
@@ -28,17 +32,19 @@ func ListAndServerGZIP(host string, _port int, gzipHandler fasthttp.RequestHandl
 
 func ListAndServerSSL(host, _path, pub, priv string, _port int, gzipHandler fasthttp.RequestHandler) {
 
-	if utils.VerifyCert(_path, pub, priv) {
+	pub = path.Join(_path, pub)
+	priv = path.Join(_path, priv)
+	if fileutils.FileExists(pub) && fileutils.FileExists(priv) {
 		port := strconv.Itoa(_port)
 		log.Info("ListAndServerSSL | Trying estabilishing connection @[https://", host, ":", port)
-		err := fasthttp.ListenAndServeTLS(host+":"+port, path.Join(_path, pub), path.Join(_path, priv), gzipHandler) // Try to start the server with input "host:port" received in input
-		if err != nil {                                                                                              // No luck, connection not succesfully. Probably port used ...
+		err := fasthttp.ListenAndServeTLS(host+":"+port, pub, priv, gzipHandler) // Try to start the server with input "host:port" received in input
+		if err != nil {                                                          // No luck, connection not succesfully. Probably port used ...
 			log.Warn("ListAndServerSSL | Port [", port, "] seems used :/")
 			for i := 0; i < 10; i++ {
-				port := strconv.Itoa(utils.Random(8081, 8090)) // Generate a new port to use
+				port := strconv.Itoa(commonutils.Random(8081, 8090)) // Generate a new port to use
 				log.Info("ListAndServerSSL | Round ", strconv.Itoa(i), "] No luck! Connecting to anotother random port [@", port, "] ...")
-				err := fasthttp.ListenAndServeTLS(host+":"+port, path.Join(_path, pub), path.Join(_path, priv), gzipHandler) // Trying with the random port generate few step above
-				if err == nil {                                                                                              // Connection estabileshed! Not reached
+				err := fasthttp.ListenAndServeTLS(host+":"+port, pub, priv, gzipHandler) // Trying with the random port generate few step above
+				if err == nil {                                                          // Connection estabileshed! Not reached
 					log.Info("ListAndServerSSL | Connection estabilished @[https://", host, ":", port)
 					break
 				}
