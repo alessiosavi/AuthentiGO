@@ -288,7 +288,7 @@ func middleware(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 	commonutils.Check(err, "middleware")
 	log.Info("Request unmarshalled: ", req)
 	log.Debug("Validating request ...")
-	if authutils.ValidateMiddlewareRequest(req) { // Verify it the json is valid
+	if authutils.ValidateMiddlewareRequest(&req) { // Verify it the json is valid
 		log.Info("Request valid! Verifying token from Redis ...")
 		auth := authutils.VerifyCookieFromRedisHTTPCore(req.Username, req.Token, redisClient) // Call the core function for recognize if the user have the token
 		if strings.Compare(auth, "AUTHORIZED") == 0 {                                         // Token in redis, call the external service..

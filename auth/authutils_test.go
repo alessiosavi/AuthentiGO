@@ -1,6 +1,9 @@
 package authutils
 
-import "testing"
+import (
+	"alessiosavi/AuthentiGo/datastructures"
+	"testing"
+)
 
 type passwordValidationTestCase struct {
 	input    string
@@ -74,8 +77,39 @@ func Test_ParseAuthCredentialFromHeaders(t *testing.T) {
 
 	for _, c := range cases {
 		u, p := ParseAuthCredentialFromHeaders(c.header)
-		if c.name != u && c.pass != p {
+		if c.name != u || c.pass != p {
 			t.Errorf("Expected %v:%v for input %v [test n. %d]", c.name, c.pass, c.header, c.number)
 		}
 	}
+}
+
+type validateMiddlewareRequestTestCase struct {
+	req      datastructures.MiddlewareRequest
+	expected bool
+	url      string
+	number   int
+}
+
+func Test_ValidateMiddlewareRequest(t *testing.T) {
+	cases := []validateMiddlewareRequestTestCase{
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it/", Method: "GET", Data: "test=1&prova=2"}, expected: true, url: "http://google.it?test=1&prova=2", number: 1},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it/", Method: "GET", Data: ""}, expected: true, url: "http://google.it/", number: 2},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it/", Method: "", Data: "test=1&prova=2"}, expected: true, url: "http://google.it?test=1&prova=2", number: 3},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it/", Method: "get", Data: "test=1&prova=2"}, expected: true, url: "http://google.it?test=1&prova=2", number: 4},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it?test2=1", Method: "get", Data: "test3=1&prova=2"}, expected: true, url: "http://google.it?test2=1&test3=1&prova=2", number: 5},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it", Method: "GET", Data: "test=1&prova=2"}, expected: true, url: "http://google.it?test=1&prova=2", number: 6},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it", Method: "GET", Data: ""}, expected: true, url: "http://google.it", number: 7},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it", Method: "", Data: "test=1&prova=2"}, expected: true, url: "http://google.it?test=1&prova=2", number: 8},
+		validateMiddlewareRequestTestCase{req: datastructures.MiddlewareRequest{Username: "test", Token: "testtest", Service: "http://google.it", Method: "get", Data: "test=1&prova=2"}, expected: true, url: "http://google.it?test=1&prova=2", number: 9},
+	}
+
+	for _, c := range cases {
+		expected := ValidateMiddlewareRequest(&c.req)
+		// t.Log("Expected: " + c.url)
+		// t.Log("Recived: " + c.req.Service)
+		if expected != c.expected || c.url != c.req.Service {
+			t.Errorf("Expected %v---%v [test n. %d]", c.url, c.req.Service, c.number)
+		}
+	}
+
 }

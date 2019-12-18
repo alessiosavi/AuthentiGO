@@ -12,6 +12,7 @@ import (
 	basicmongo "alessiosavi/AuthentiGo/database/mongo"
 	basicredis "alessiosavi/AuthentiGo/database/redis"
 	"alessiosavi/AuthentiGo/datastructures"
+
 	stringutils "github.com/alessiosavi/GoGPUtils/string"
 	"github.com/go-redis/redis"
 	"github.com/valyala/fasthttp"
@@ -234,7 +235,7 @@ func ValidateUsername(username string) bool {
 		log.Warn("ValidateUsername | Username have strange character :/ [", username, "]")
 		return false
 	}
-	log.Info("ValidateUsername | Username [", username, "] VALIDATED!")
+	log.Debug("ValidateUsername | Username [", username, "] VALIDATED!")
 	return true
 }
 
@@ -249,7 +250,7 @@ func ValidateToken(token string) bool {
 		log.Warn("ValidateToken | Token len not in 0<token<100 :/ [found ", len(token), "]")
 		return false
 	}
-	log.Info("ValidateToken | Token [", token, "] VALIDATED!")
+	log.Debug("ValidateToken | Token [", token, "] VALIDATED!")
 	return true
 }
 
@@ -286,14 +287,31 @@ func CreateCookie(key string, value string, expire int) *fasthttp.Cookie {
 	return &authCookie
 }
 
-// ValidateMiddlewareRequest is developed in order to verify it the request from the customer is valid. Can be view as a "filter"
-func ValidateMiddlewareRequest(request datastructures.MiddlewareRequest) bool {
+// ValidateMiddlewareRequest is developed in order to verify it the request from the customer is valid.
+func ValidateMiddlewareRequest(request *datastructures.MiddlewareRequest) bool {
 	if ValidateUsername(request.Username) { // Validate the username
 		if ValidateToken(request.Token) { // Validate the token
-			if !stringutils.IsBlank(request.Method) { // Verify if the request is not empty
-				if !stringutils.IsBlank(request.Data) {
-					return true
+			if !stringutils.IsBlank(request.Service) { // Validate the external service URL to call
+				if stringutils.IsBlank(request.Method) { // Set GET method
+					request.Method = "GET"
 				}
+				// Concat the query parameter in the URL in case of GET
+				if strings.ToUpper(request.Method) == "GET" && !stringutils.IsBlank(request.Data) {
+					// If no ? is present, concatenate the data in the external service URL
+					if !strings.Contains(request.Service, "?") {
+						// Overwrite the last index "/" with the provided params
+						if strings.HasSuffix(request.Service, "/") {
+							index := strings.LastIndex(request.Service, "/")
+							log.Debug("Index -> [", index, "] -> ["+request.Service[:index]+"]")
+							request.Service = request.Service[:index]
+						}
+						request.Service += "?" + request.Data
+					} else { // adding additional parameter to the one provided in the URL
+						request.Service += "&" + request.Data
+					}
+				}
+				log.Trace("Request -> " + request.Service)
+				return true
 			}
 		}
 	}

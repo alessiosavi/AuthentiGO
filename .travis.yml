@@ -25,5 +25,6 @@ script:
   - go build
   - ./AuthentiGo 2&>1&> log.out &
   - go test -v test/authentigo_test.go
+  - go test -v ./auth
   - pkill AuthentiGo
   - cat log.out
