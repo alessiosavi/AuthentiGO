@@ -3,7 +3,7 @@ module alessiosavi/AuthentiGo
 go 1.13
 
 require (
-	github.com/alessiosavi/GoGPUtils v0.0.25
+	github.com/alessiosavi/GoGPUtils v0.0.30
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/go-redis/redis v6.15.6+incompatible
 	github.com/golang/protobuf v1.3.2 // indirect
