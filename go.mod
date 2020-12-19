@@ -10,7 +10,7 @@ require (
 	github.com/klauspost/compress v1.9.4 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/onrik/logrus v0.4.1
+	github.com/onrik/logrus v0.8.0
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
