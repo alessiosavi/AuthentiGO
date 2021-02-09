@@ -14,6 +14,6 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.4.0 // indirect
-	github.com/valyala/fasthttp v1.18.0
+	github.com/valyala/fasthttp v1.20.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
