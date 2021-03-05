@@ -57,7 +57,7 @@ func InsertTokenIntoRedis(User datastructures.Person, token string, redisClient 
 	if redisClient == nil {
 		log.Error("InsertTokenIntoRedis | Impossible to connect to Redis for store the token | CLIENT: ", redisClient) //, " | ERR: ", err)
 		return "REDIS_DB_UNAVAIBLE"
-	} // Store the token for future auth check
+	}                                                                           // Store the token for future auth check
 	if basicredis.InsertIntoClient(redisClient, User.Username, token, expire) { // insert the token into the DB
 		log.Info("InsertTokenIntoRedis | Token inserted! All operation finished correctly!")
 		return "OK"

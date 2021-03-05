@@ -13,17 +13,17 @@ import (
 
 // InitMongoDBConnection return a session to the Mongo instances configured in input.
 // If input is null connect to the default instances
-func InitMongoDBConnection(host string, port int, connectionMode string, refreshMode bool) *mgo.Session {
+func InitMongoDBConnection(host string) (*mgo.Session, error) {
 	log.Warn("InitMongoDBConnection | Connecting to MongoDB using: ", host)
 	session, err := mgo.Dial(host) // Connection to MongoDB
 	if err != nil {
 		log.Error("InitMongoDBConnection | Error! MongoDB does not reply! :/", session)
-		return nil
+		return nil, err
 	}
 	log.Warn("InitMongoDBConnection | Connection init finished succesfully! | ", session)
 	log.Info("InitMongoDBConnection | Running in Strong (secure read/write) mode")
 	session.SetMode(mgo.Strong, true) // Configuring MongoDB session
-	return session
+	return session, nil
 }
 
 // RemoveCollectionFromDB is used for remove the collection in input from the db

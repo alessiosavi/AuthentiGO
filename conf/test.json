@@ -1,32 +1,32 @@
 {
+  "Host": "0.0.0.0",
+  "Port": 11001,
+  "Version": "v0.2.0",
+  "SSL": {
+    "Path": "./conf/ssl/",
+    "Cert": "localhost.crt",
+    "Key": "localhost.key",
+    "Enabled": false
+  },
+  "Mongo": {
     "Host": "0.0.0.0",
-    "Port": 11001,
-    "Version": "v0.2.0",
-    "SSL": {
-        "Path": "./conf/ssl/",
-        "Cert": "localhost.crt",
-        "Key": "localhost.key",
-        "Enabled": false 
-    },
-    "Mongo": {
-        "Host": "0.0.0.0",
-        "Port": 27017,
-        "Users": {
-            "DB": "AuthentiGO_DB",
-            "Collection": "USERS_COLLECTION"
-        }
-    },
-    "Redis": {
-        "Host": "0.0.0.0",
-        "Port": "6379",
-        "Token": {
-            "Expire": 300,
-            "DB": 1
-        }
-    },
-    "Log": {
-        "Level": "trace",
-        "Path": "./log/",
-        "Name": "authentigo.log"
+    "Port": 27017,
+    "Users": {
+      "DB": "AuthentiGO_DB",
+      "Collection": "USERS_COLLECTION"
     }
+  },
+  "Redis": {
+    "Host": "0.0.0.0",
+    "Port": "6379",
+    "Token": {
+      "Expire": 300,
+      "DB": 1
+    }
+  },
+  "Log": {
+    "Level": "trace",
+    "Path": "./log/",
+    "Name": "authentigo.log"
+  }
 }

@@ -22,22 +22,22 @@ import (
 	// Common utils
 	commonutils "alessiosavi/AuthentiGo/utils/common"
 	// Provide exportable datastructure
-	datastructures "alessiosavi/AuthentiGo/datastructures"
+	"alessiosavi/AuthentiGo/datastructures"
 	// HTTP utils
 	httputils "alessiosavi/AuthentiGo/utils/http"
 
 	// == External dependencies ==
 
 	// Manage mongo connection
-	mgo "github.com/globalsign/mgo"
+	"github.com/globalsign/mgo"
 	// Manage redis connection
-	redis "github.com/go-redis/redis"
+	"github.com/go-redis/redis"
 	// Print filename on log
-	filename "github.com/onrik/logrus/filename"
+	"github.com/onrik/logrus/filename"
 	// Very nice log library
 	log "github.com/sirupsen/logrus"
 	// Screaming fast HTTP server
-	fasthttp "github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/expvarhandler"
 )
 
@@ -56,16 +56,19 @@ func main() {
 	log.SetLevel(commonutils.SetDebugLevel(cfg.Log.Level))
 
 	// ==== CONNECT TO MONGO ====
-	mongoClient := basicmongo.InitMongoDBConnection(cfg.Mongo.Host, cfg.Mongo.Port, "", true)
-	if mongoClient == nil {
-		log.Fatal("Unable to connect to mongo!")
+	mongoClient, err := basicmongo.InitMongoDBConnection(cfg.Mongo.Host)
+
+	if err != nil {
+		log.Error("Unable to connect to mongo!", err)
+		return
 	}
 	defer mongoClient.Close()
 
 	// ==== CONNECT TO REDIS ====
-	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Token.DB)
-	if redisClient == nil {
-		log.Fatal("Unable to connect to redis!")
+	redisClient, err := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Token.DB)
+	if err != nil {
+		log.Error("Unable to connect to redis!", err)
+		return
 	}
 	defer redisClient.Close()
 

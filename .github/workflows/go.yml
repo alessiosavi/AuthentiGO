@@ -1,5 +1,5 @@
 name: Go
-on: [push]
+on: [ push ]
 jobs:
 
   build:
@@ -7,23 +7,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-      id: go
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+        id: go
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: |
-        go clean
-        go mod download
-        go get -v -u
+      - name: Get dependencies
+        run: |
+          go clean
+          go mod download
+          go get -v -u
 
-    - name: Build
-      run: go build -v .
-      
-    - name: Test
-      run: go test ./auth
+      - name: Build
+        run: go build -v .
+
+      - name: Test
+        run: go test ./auth

@@ -9,7 +9,7 @@ import (
 )
 
 // ConnectToDb use emtpy string for hardcoded port
-func ConnectToDb(addr string, port string, db int) *redis.Client {
+func ConnectToDb(addr string, port string, db int) (*redis.Client, error) {
 	if strings.Compare(addr, port) == 0 {
 		addr = "localhost"
 		port = "6379"
@@ -23,9 +23,9 @@ func ConnectToDb(addr string, port string, db int) *redis.Client {
 	err := client.Ping().Err()
 	if err != nil {
 		log.Error("Impossibile to connecto to DB ....| CLIENT: ", addr, ":", port, " | ERR: ", err)
-		return nil
+		return nil, err
 	}
-	return client
+	return client, nil
 }
 
 // GetValueFromDB is delegated to check if a key is alredy inserted and return the value
