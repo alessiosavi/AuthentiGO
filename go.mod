@@ -12,7 +12,7 @@ require (
 	github.com/onrik/logrus v0.8.0
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
-	github.com/sirupsen/logrus v1.8.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tidwall/gjson v1.6.8 // indirect
 	github.com/valyala/fasthttp v1.22.0
